@@ -1,5 +1,56 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { ComposableMap, Geographies, Geography, Marker } from "react-simple-maps";
 import { EntityType, PresenceData } from "@/types";
+
+const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
+
+// ISO 3166-1 numeric → alpha-2 mapping (subset covering map countries)
+const NUMERIC_TO_ALPHA2: Record<number, string> = {
+  8: "AL", 12: "DZ", 24: "AO", 32: "AR", 36: "AU", 40: "AT", 50: "BD",
+  56: "BE", 68: "BO", 76: "BR", 100: "BG", 116: "KH", 120: "CM", 124: "CA",
+  140: "CF", 144: "LK", 152: "CL", 156: "CN", 170: "CO", 180: "CD",
+  188: "CR", 192: "CU", 196: "CY", 203: "CZ", 204: "BJ", 208: "DK",
+  214: "DO", 218: "EC", 818: "EG", 222: "SV", 231: "ET", 246: "FI",
+  250: "FR", 266: "GA", 276: "DE", 288: "GH", 300: "GR", 320: "GT",
+  332: "HT", 340: "HN", 348: "HU", 356: "IN", 360: "ID", 364: "IR",
+  368: "IQ", 372: "IE", 376: "IL", 380: "IT", 388: "JM", 392: "JP",
+  400: "JO", 398: "KZ", 404: "KE", 408: "KP", 410: "KR", 414: "KW",
+  418: "LA", 422: "LB", 430: "LR", 434: "LY", 458: "MY", 484: "MX",
+  504: "MA", 508: "MZ", 516: "NA", 524: "NP", 528: "NL", 540: "NC",
+  554: "NZ", 558: "NI", 562: "NE", 566: "NG", 578: "NO", 586: "PK",
+  591: "PA", 598: "PG", 600: "PY", 604: "PE", 608: "PH", 616: "PL",
+  620: "PT", 630: "PR", 634: "QA", 642: "RO", 643: "RU", 682: "SA",
+  686: "SN", 694: "SL", 706: "SO", 710: "ZA", 724: "ES", 729: "SD",
+  752: "SE", 756: "CH", 760: "SY", 764: "TH", 768: "TG", 780: "TT",
+  788: "TN", 792: "TR", 800: "UG", 804: "UA", 784: "AE", 826: "GB",
+  840: "US", 858: "UY", 860: "UZ", 862: "VE", 704: "VN", 887: "YE",
+  894: "ZM", 716: "ZW", 702: "SG", 716: "ZW", 50: "BD",
+};
+
+// Country centroids for marker placement [longitude, latitude]
+const CENTROIDS: Record<string, [number, number]> = {
+  SE: [18.0, 62.0],
+  DE: [10.4, 51.2],
+  GB: [-1.5, 52.5],
+  SG: [103.8, 1.35],
+  VN: [108.0, 16.0],
+  FR: [2.3, 46.2],
+  NL: [5.3, 52.1],
+  US: [-95.7, 37.1],
+  NO: [8.5, 60.5],
+  DK: [10.0, 56.0],
+  FI: [26.0, 64.0],
+  PL: [19.1, 52.0],
+  CH: [8.2, 46.8],
+  IN: [78.9, 20.6],
+  JP: [138.0, 36.2],
+  AU: [133.8, -25.3],
+  ZA: [25.1, -29.0],
+  AE: [53.8, 23.4],
+  BR: [-51.9, -14.2],
+  CN: [104.2, 35.9],
+  CA: [-96.8, 56.1],
+};
 
 interface WorldMapProps {
   presenceData: Record<string, PresenceData>;
@@ -8,212 +59,175 @@ interface WorldMapProps {
   panelOpen: boolean;
 }
 
-interface CountryInfo {
+interface TooltipState {
+  x: number;
+  y: number;
   name: string;
-  centroid?: [number, number];
+  iso: string;
 }
 
-const COUNTRY_INFO: Record<string, CountryInfo> = {
-  SE: { name: "Sweden", centroid: [459, 83] },
-  DE: { name: "Germany", centroid: [443, 125] },
-  GB: { name: "United Kingdom", centroid: [408, 115] },
-  SG: { name: "Singapore", centroid: [702, 264] },
-  VN: { name: "Vietnam", centroid: [718, 212] },
-  FR: { name: "France", centroid: [420, 140] },
-  NL: { name: "Netherlands", centroid: [430, 112] },
-  US: { name: "United States", centroid: [140, 185] },
-  NO: { name: "Norway", centroid: [448, 62] },
-  DK: { name: "Denmark", centroid: [445, 93] },
-  FI: { name: "Finland", centroid: [472, 70] },
-  PL: { name: "Poland", centroid: [470, 112] },
-  CH: { name: "Switzerland", centroid: [440, 145] },
-  IN: { name: "India", centroid: [655, 210] },
-  JP: { name: "Japan", centroid: [785, 148] },
-  AU: { name: "Australia", centroid: [800, 370] },
-  ZA: { name: "South Africa", centroid: [505, 385] },
-  AE: { name: "UAE", centroid: [593, 200] },
-  BR: { name: "Brazil", centroid: [248, 315] },
-  CN: { name: "China", centroid: [730, 175] },
-  CA: { name: "Canada", centroid: [110, 130] },
-};
+function getAlpha2(geo: { id?: string | number }): string {
+  if (!geo.id) return "";
+  const num = typeof geo.id === "string" ? parseInt(geo.id, 10) : geo.id;
+  return NUMERIC_TO_ALPHA2[num] ?? "";
+}
 
-const ENTITY_LABELS: Record<EntityType, string> = {
-  hq: "HQ",
-  eor: "EOR",
-  branch: "Branch",
-  subsidiary: "Sub.",
-  representative: "Rep.",
-  contractor: "Contr.",
-  none: "—",
-};
+function getCountryName(geo: { properties?: { name?: string } }): string {
+  return geo.properties?.name ?? "";
+}
 
 export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpen }: WorldMapProps) {
   const [hovered, setHovered] = useState<string | null>(null);
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; country: string; iso: string } | null>(null);
+  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dims, setDims] = useState({ width: 800, height: 500 });
 
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<SVGPathElement>, iso: string, name: string) => {
-      const rect = (e.currentTarget.closest("svg") as SVGElement)?.getBoundingClientRect();
-      if (rect) {
-        setTooltip({
-          x: e.clientX - rect.left + 10,
-          y: e.clientY - rect.top - 10,
-          country: name,
-          iso,
-        });
-      }
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      if (width > 0 && height > 0) setDims({ width, height });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const handleMouseEnter = useCallback(
+    (e: React.MouseEvent, iso: string, name: string) => {
       setHovered(iso);
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (rect) setTooltip({ x: e.clientX - rect.left + 14, y: e.clientY - rect.top - 14, name, iso });
     },
     [],
   );
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setTooltip((prev) => prev ? { ...prev, x: e.clientX - rect.left + 14, y: e.clientY - rect.top - 14 } : null);
+  }, []);
 
   const handleMouseLeave = useCallback(() => {
     setHovered(null);
     setTooltip(null);
   }, []);
 
-  const getCountryFill = (iso: string) => {
+  const getFill = (iso: string): string => {
     if (iso === activeCountry) return "#0A0A0A";
-    if (hovered === iso) return "#D0CCC5";
-    if (presenceData[iso]) return "#E0DDD6";
+    if (hovered === iso) return "#C8C5BE";
+    if (presenceData[iso]) return "#D8D4CC";
     return "#ECEAE3";
   };
 
+  const getStroke = (iso: string): string => {
+    if (iso === activeCountry) return "#0A0A0A";
+    return "#C8C5BE";
+  };
+
+  // Scale fills the container width; center[1]=15 keeps the inhabited world centred vertically
+  const scale = (dims.width - (panelOpen ? 340 : 0)) / 5.5;
+
   return (
     <div
-      className="relative w-full h-full transition-all duration-350"
-      style={{ paddingRight: panelOpen ? 340 : 0 }}
+      ref={containerRef}
+      className="relative w-full h-full rsm-map"
+      style={{ paddingRight: panelOpen ? 340 : 0, transition: "padding-right 350ms cubic-bezier(0.4,0,0.2,1)" }}
+      onMouseMove={handleMouseMove}
     >
-      <svg
-        viewBox="0 0 1000 500"
-        className="w-full h-full"
-        style={{ background: "transparent" }}
+      <ComposableMap
+        width={dims.width - (panelOpen ? 340 : 0)}
+        height={dims.height}
+        projectionConfig={{ scale, center: [0, 15] }}
+        style={{ width: "100%", height: "100%", display: "block" }}
       >
-        {/* Simplified world map paths */}
-        <WorldPaths
-          presenceData={presenceData}
-          activeCountry={activeCountry}
-          onCountryClick={onCountryClick}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
-          getCountryFill={getCountryFill}
-        />
+        <Geographies geography={GEO_URL}>
+          {({ geographies }) =>
+            geographies.map((geo) => {
+              const iso = getAlpha2(geo);
+              const name = getCountryName(geo);
+              return (
+                <Geography
+                  key={geo.rsmKey}
+                  geography={geo}
+                  onClick={() => iso && onCountryClick(iso, name)}
+                  onMouseEnter={(e) => iso && handleMouseEnter(e, iso, name)}
+                  onMouseLeave={handleMouseLeave}
+                  style={{
+                    default: {
+                      fill: getFill(iso),
+                      stroke: getStroke(iso),
+                      strokeWidth: 0.4,
+                      outline: "none",
+                      cursor: iso ? "pointer" : "default",
+                      transition: "fill 120ms ease",
+                    },
+                    hover: {
+                      fill: iso === activeCountry ? "#0A0A0A" : "#C8C5BE",
+                      stroke: getStroke(iso),
+                      strokeWidth: 0.5,
+                      outline: "none",
+                      cursor: iso ? "pointer" : "default",
+                    },
+                    pressed: {
+                      fill: "#0A0A0A",
+                      stroke: "#0A0A0A",
+                      strokeWidth: 0.5,
+                      outline: "none",
+                    },
+                  }}
+                />
+              );
+            })
+          }
+        </Geographies>
 
-        {/* Presence badges */}
+        {/* Employee presence markers */}
         {Object.entries(presenceData).map(([iso, data]) => {
-          const info = COUNTRY_INFO[iso];
-          if (!info?.centroid) return null;
-          const [cx, cy] = info.centroid;
+          const coords = CENTROIDS[iso];
+          if (!coords) return null;
+          const isActive = iso === activeCountry;
           return (
-            <g key={iso} style={{ pointerEvents: "none" }}>
-              <circle cx={cx} cy={cy} r={12} fill={iso === activeCountry ? "#F5F2EC" : "#0A0A0A"} />
+            <Marker key={iso} coordinates={coords}>
+              <circle
+                r={11}
+                fill={isActive ? "#F5F2EC" : "#0A0A0A"}
+                stroke={isActive ? "#0A0A0A" : "none"}
+                strokeWidth={1}
+                style={{ pointerEvents: "none" }}
+              />
               <text
-                x={cx}
-                y={cy + 3.5}
                 textAnchor="middle"
-                fontSize={9}
-                fontFamily="DM Mono, monospace"
-                fill={iso === activeCountry ? "#0A0A0A" : "#F5F2EC"}
+                y={4}
+                style={{
+                  fontFamily: "DM Mono, monospace",
+                  fontSize: 9,
+                  fill: isActive ? "#0A0A0A" : "#F5F2EC",
+                  pointerEvents: "none",
+                  userSelect: "none",
+                }}
               >
                 {data.employees}
               </text>
-            </g>
+            </Marker>
           );
         })}
-      </svg>
+      </ComposableMap>
 
       {/* Tooltip */}
       {tooltip && (
         <div
-          className="absolute pointer-events-none bg-primary text-primary-foreground font-mono text-[10px] tracking-widest uppercase px-3 py-2"
-          style={{ left: tooltip.x, top: tooltip.y, zIndex: 100 }}
+          className="absolute pointer-events-none bg-primary text-primary-foreground font-mono text-[10px] tracking-widest uppercase px-3 py-2 z-50"
+          style={{ left: tooltip.x, top: tooltip.y }}
         >
-          <div>{tooltip.country}</div>
+          <div>{tooltip.name || tooltip.iso}</div>
           {presenceData[tooltip.iso] && (
-            <div className="text-primary-foreground/70">
-              {presenceData[tooltip.iso].employees} emp · {ENTITY_LABELS[presenceData[tooltip.iso].entityType]}
+            <div className="opacity-70 mt-0.5">
+              {presenceData[tooltip.iso].employees} employees · {presenceData[tooltip.iso].entityType.toUpperCase()}
             </div>
           )}
         </div>
       )}
     </div>
-  );
-}
-
-interface WorldPathsProps {
-  presenceData: Record<string, PresenceData>;
-  activeCountry: string | null;
-  onCountryClick: (iso: string, name: string) => void;
-  onMouseMove: (e: React.MouseEvent<SVGPathElement>, iso: string, name: string) => void;
-  onMouseLeave: () => void;
-  getCountryFill: (iso: string) => string;
-}
-
-function WorldPaths({ onCountryClick, onMouseMove, onMouseLeave, getCountryFill }: WorldPathsProps) {
-  const countries: Array<{ iso: string; d: string }> = [
-    // Europe
-    { iso: "GB", d: "M390,95 L395,90 L408,88 L420,90 L422,100 L415,108 L405,120 L395,118 L388,110 Z" },
-    { iso: "NO", d: "M430,45 L450,40 L470,50 L468,65 L455,75 L440,72 L428,60 Z" },
-    { iso: "SE", d: "M450,60 L470,52 L478,65 L475,85 L462,92 L448,88 L445,72 Z" },
-    { iso: "FI", d: "M473,52 L490,45 L500,55 L498,70 L485,80 L472,75 L470,63 Z" },
-    { iso: "DK", d: "M438,85 L448,83 L452,93 L445,98 L436,95 Z" },
-    { iso: "NL", d: "M422,103 L434,100 L436,110 L424,112 Z" },
-    { iso: "BE", d: "M420,110 L432,108 L434,118 L422,120 Z" },
-    { iso: "DE", d: "M432,108 L460,105 L465,118 L460,132 L445,138 L430,132 L428,120 Z" },
-    { iso: "PL", d: "M462,105 L488,102 L492,118 L480,128 L462,124 L460,115 Z" },
-    { iso: "FR", d: "M402,120 L428,118 L432,140 L418,152 L400,148 L395,130 Z" },
-    { iso: "CH", d: "M428,135 L444,132 L445,145 L428,148 Z" },
-    { iso: "AT", d: "M444,130 L462,128 L462,140 L444,142 Z" },
-    { iso: "ES", d: "M380,150 L410,148 L408,168 L380,170 Z" },
-    { iso: "IT", d: "M432,140 L448,138 L452,160 L440,172 L428,165 L428,152 Z" },
-    { iso: "PT", d: "M370,150 L382,148 L380,170 L368,168 Z" },
-    { iso: "RU", d: "M490,60 L620,55 L625,100 L590,110 L495,105 L488,80 Z" },
-    { iso: "TR", d: "M490,155 L540,150 L542,165 L490,168 Z" },
-    // Americas
-    { iso: "US", d: "M60,130 L220,128 L225,195 L200,220 L70,218 L55,195 Z" },
-    { iso: "CA", d: "M60,60 L240,58 L242,130 L62,132 Z" },
-    { iso: "MX", d: "M65,218 L135,215 L140,245 L90,260 L62,245 Z" },
-    { iso: "BR", d: "M200,270 L280,265 L285,340 L240,360 L195,345 Z" },
-    { iso: "AR", d: "M195,345 L240,340 L242,390 L195,392 Z" },
-    // Africa
-    { iso: "ZA", d: "M472,360 L530,355 L540,400 L490,408 L468,392 Z" },
-    { iso: "NG", d: "M410,270 L450,268 L452,300 L408,302 Z" },
-    { iso: "EG", d: "M490,200 L525,198 L528,228 L488,230 Z" },
-    // Middle East
-    { iso: "AE", d: "M568,192 L600,188 L605,205 L568,208 Z" },
-    { iso: "IL", d: "M510,188 L522,186 L524,200 L508,202 Z" },
-    // Asia
-    { iso: "IN", d: "M615,180 L680,175 L685,248 L640,262 L608,238 Z" },
-    { iso: "CN", d: "M680,120 L780,115 L785,175 L720,188 L678,180 Z" },
-    { iso: "JP", d: "M788,130 L805,125 L808,160 L790,165 Z" },
-    { iso: "SG", d: "M698,258 L710,256 L712,268 L698,270 Z" },
-    { iso: "VN", d: "M708,190 L725,185 L730,230 L710,235 Z" },
-    { iso: "KR", d: "M770,148 L785,145 L788,162 L770,165 Z" },
-    { iso: "ID", d: "M700,265 L760,260 L765,285 L700,288 Z" },
-    // Oceania
-    { iso: "AU", d: "M740,330 L855,325 L860,405 L740,408 Z" },
-    { iso: "NZ", d: "M865,375 L880,370 L882,405 L864,408 Z" },
-  ];
-
-  return (
-    <>
-      {countries.map(({ iso, d }) => {
-        const info = COUNTRY_INFO[iso];
-        const name = info?.name ?? iso;
-        return (
-          <path
-            key={iso}
-            d={d}
-            fill={getCountryFill(iso)}
-            stroke="#0A0A0A"
-            strokeWidth={0.4}
-            className="cursor-pointer transition-colors duration-100"
-            onClick={() => onCountryClick(iso, name)}
-            onMouseMove={(e) => onMouseMove(e, iso, name)}
-            onMouseLeave={onMouseLeave}
-          />
-        );
-      })}
-    </>
   );
 }

@@ -160,9 +160,9 @@ export default function Index() {
         className={`flex-1 ${result ? "pt-[129px]" : "pt-[89px]"} pb-8 overflow-auto`}
         style={{ height: "calc(100vh - 32px)" }}
       >
-        {/* MAP VIEW */}
+        {/* MAP VIEW — fixed container fills exactly between header and footer */}
         {view === "map" && (
-          <div className="relative w-full h-full">
+          <div className="fixed inset-0 top-[89px] bottom-8">
             <WorldMap
               presenceData={presenceData}
               onCountryClick={handleCountryClick}
