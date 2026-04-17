@@ -3,8 +3,16 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Index from "./pages/Index.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import { AnalysisProvider } from "@/contexts/AnalysisContext";
+import { AppLayout } from "@/components/AppLayout";
+import Overview from "./pages/Overview";
+import Conflicts from "./pages/Conflicts";
+import Scenarios from "./pages/Scenarios";
+import Plan from "./pages/Plan";
+import Memo from "./pages/Memo";
+import Help from "./pages/Help";
+import Settings from "./pages/Settings";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
@@ -14,11 +22,20 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AnalysisProvider>
+          <Routes>
+            <Route element={<AppLayout />}>
+              <Route path="/" element={<Overview />} />
+              <Route path="/conflicts" element={<Conflicts />} />
+              <Route path="/scenarios" element={<Scenarios />} />
+              <Route path="/plan" element={<Plan />} />
+              <Route path="/memo" element={<Memo />} />
+              <Route path="/help" element={<Help />} />
+              <Route path="/settings" element={<Settings />} />
+            </Route>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AnalysisProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

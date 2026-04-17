@@ -1,16 +1,16 @@
-type View = "map" | "conflicts" | "scenarios" | "plan" | "memo";
+import { NavLink, Link } from "react-router-dom";
+import { MaterialIcon } from "@/components/MaterialIcon";
 
 interface NavItem {
-  key: View;
+  to: string;
   label: string;
   count?: number;
+  end?: boolean;
 }
 
 interface TopAppBarProps {
   onMenuToggle?: () => void;
   menuOpen?: boolean;
-  view?: View;
-  onViewChange?: (v: View) => void;
   conflictCount?: number;
   actionCount?: number;
 }
@@ -18,17 +18,15 @@ interface TopAppBarProps {
 export const TopAppBar = ({
   onMenuToggle,
   menuOpen,
-  view = "map",
-  onViewChange,
   conflictCount,
   actionCount,
 }: TopAppBarProps) => {
   const navItems: NavItem[] = [
-    { key: "map", label: "Overview" },
-    { key: "conflicts", label: "Conflicts", count: conflictCount },
-    { key: "scenarios", label: "Scenarios" },
-    { key: "plan", label: "Action Plan", count: actionCount },
-    { key: "memo", label: "Memo" },
+    { to: "/", label: "Overview", end: true },
+    { to: "/conflicts", label: "Conflicts", count: conflictCount },
+    { to: "/scenarios", label: "Scenarios" },
+    { to: "/plan", label: "Action Plan", count: actionCount },
+    { to: "/memo", label: "Memo" },
   ];
 
   return (
@@ -57,48 +55,73 @@ export const TopAppBar = ({
           />
         </button>
 
-        <span className="font-headline font-bold text-xl tracking-tighter text-primary">
+        <Link
+          to="/"
+          className="font-headline font-bold text-xl tracking-tighter text-primary hover:opacity-80 transition-opacity"
+        >
           JurisdictIQ
-        </span>
+        </Link>
 
         <div className="hidden md:flex items-center space-x-6 ml-4">
-          {navItems.map((item) => {
-            const isActive = item.key === view;
-            return (
-              <button
-                key={item.key}
-                onClick={() => onViewChange?.(item.key)}
-                className={`font-headline text-base tracking-tight transition-colors duration-150 px-1 pb-1 flex items-center gap-2 ${
+          {navItems.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) =>
+                `font-headline text-base tracking-tight transition-colors duration-150 px-1 pb-1 flex items-center gap-2 ${
                   isActive
                     ? "text-primary border-b-2 border-primary font-bold"
                     : "text-outline hover:text-primary border-b-2 border-transparent"
-                }`}
-              >
-                {item.label}
-                {item.count !== undefined && (
-                  <span
-                    className={`font-mono text-[9px] px-1.5 py-0.5 ${
-                      isActive
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-surface-highest text-on-surface"
-                    }`}
-                  >
-                    {item.count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  {item.label}
+                  {item.count !== undefined && (
+                    <span
+                      className={`font-mono text-[9px] px-1.5 py-0.5 ${
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-surface-highest text-on-surface"
+                      }`}
+                    >
+                      {item.count}
+                    </span>
+                  )}
+                </>
+              )}
+            </NavLink>
+          ))}
         </div>
       </div>
 
-      <div className="flex items-center space-x-6">
-        <span className="hidden sm:inline font-mono text-xs tracking-widest text-primary uppercase">
-          MATTER-2024-08
-        </span>
-        <span className="font-mono text-[10px] tracking-widest text-primary-foreground bg-primary px-3 py-1 uppercase">
-          PLATINUM_CLIENT
-        </span>
+      <div className="flex items-center space-x-1">
+        <NavLink
+          to="/help"
+          className={({ isActive }) =>
+            `flex items-center gap-1.5 font-mono text-[10px] tracking-widest uppercase transition-colors px-3 py-2 ${
+              isActive ? "text-primary" : "text-outline hover:text-primary"
+            }`
+          }
+          aria-label="Help and documentation"
+        >
+          <MaterialIcon name="help_outline" className="text-[18px]" />
+          <span className="hidden sm:inline">Help</span>
+        </NavLink>
+        <NavLink
+          to="/settings"
+          className={({ isActive }) =>
+            `flex items-center gap-1.5 font-mono text-[10px] tracking-widest uppercase transition-colors px-3 py-2 ${
+              isActive ? "text-primary" : "text-outline hover:text-primary"
+            }`
+          }
+          aria-label="Settings"
+        >
+          <MaterialIcon name="settings" className="text-[18px]" />
+          <span className="hidden sm:inline">Settings</span>
+        </NavLink>
       </div>
 
       <div className="absolute bottom-0 left-0 bg-surface-container h-px w-full" />
