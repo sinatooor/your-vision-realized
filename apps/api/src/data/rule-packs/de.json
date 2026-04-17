@@ -1,0 +1,128 @@
+[
+  {
+    "id": "DE-001",
+    "jurisdiction": "DE",
+    "category": "tax",
+    "title": "Permanent Establishment (PE) Risk",
+    "description": "Sustained business activity or the presence of a dependent agent in Germany can create a Permanent Establishment, exposing the foreign entity to German corporate income tax (Körperschaftsteuer) on profits attributable to German operations.",
+    "trigger": "First employee hired or sustained business activity",
+    "threshold": "Sustained presence or dependent agent",
+    "severity": "critical",
+    "source": {
+      "citation": "§ 12 AO (Abgabenordnung) + OECD Model Tax Convention Art. 5",
+      "url": "https://www.gesetze-im-internet.de/ao_1977/__12.html",
+      "retrievedAt": "2024-01-01T00:00:00.000Z",
+      "isLive": false
+    },
+    "confidence": 0.95,
+    "requiresLocalCounsel": true
+  },
+  {
+    "id": "DE-002",
+    "jurisdiction": "DE",
+    "category": "employment",
+    "title": "Works Council (Betriebsrat) Formation Right",
+    "description": "Any workplace with five or more permanent employees has the right to elect a Works Council. Once formed, the Betriebsrat has statutory co-determination rights over working hours, performance monitoring, HR analytics tools, and health and safety measures.",
+    "trigger": "5th permanent employee hired in Germany",
+    "threshold": "5 employees",
+    "severity": "high",
+    "source": {
+      "citation": "Betriebsverfassungsgesetz (BetrVG) § 1",
+      "url": "https://www.gesetze-im-internet.de/betrvg/__1.html",
+      "retrievedAt": "2024-01-01T00:00:00.000Z",
+      "isLive": false
+    },
+    "confidence": 0.98,
+    "requiresLocalCounsel": false
+  },
+  {
+    "id": "DE-003",
+    "jurisdiction": "DE",
+    "category": "data",
+    "title": "GDPR Art. 28 Data Processing Agreement",
+    "description": "Any processor handling EU personal data must execute a Data Processing Agreement (DPA) compliant with GDPR Art. 28. This applies to all sub-processors and must include mandatory clauses on processing instructions, security measures, and audit rights.",
+    "trigger": "Any processing of EU personal data by a processor",
+    "threshold": null,
+    "severity": "high",
+    "source": {
+      "citation": "GDPR Art. 28, CELEX: 32016R0679",
+      "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016R0679",
+      "retrievedAt": "2024-01-01T00:00:00.000Z",
+      "isLive": false
+    },
+    "confidence": 0.97,
+    "requiresLocalCounsel": false
+  },
+  {
+    "id": "DE-004",
+    "jurisdiction": "DE",
+    "category": "licensing",
+    "title": "Impressumspflicht (German Imprint Requirement)",
+    "description": "Any commercial website accessible in Germany must display a legally compliant imprint (Impressum) with the operator's full name, address, contact details, and commercial register information. Violations attract fines and cease-and-desist actions.",
+    "trigger": "Operating a commercial website accessible in Germany",
+    "threshold": null,
+    "severity": "medium",
+    "source": {
+      "citation": "Telemediengesetz (TMG) § 5",
+      "url": "https://www.gesetze-im-internet.de/tmg/__5.html",
+      "retrievedAt": "2024-01-01T00:00:00.000Z",
+      "isLive": false
+    },
+    "confidence": 0.9,
+    "requiresLocalCounsel": false
+  },
+  {
+    "id": "DE-005",
+    "jurisdiction": "DE",
+    "category": "tax",
+    "title": "German Payroll Tax Registration",
+    "description": "Employers must register for Lohnsteuer (payroll tax withholding) with the German tax authority (Finanzamt) before the first payroll is processed. Failure to withhold and remit payroll tax creates personal liability for the company's management.",
+    "trigger": "First payroll employee in Germany",
+    "threshold": null,
+    "severity": "high",
+    "source": {
+      "citation": "Einkommensteuergesetz (EStG) § 38",
+      "url": "https://www.gesetze-im-internet.de/estg/__38.html",
+      "retrievedAt": "2024-01-01T00:00:00.000Z",
+      "isLive": false
+    },
+    "confidence": 0.97,
+    "requiresLocalCounsel": false
+  },
+  {
+    "id": "DE-006",
+    "jurisdiction": "DE",
+    "category": "employment",
+    "title": "Social Insurance Registration",
+    "description": "Employers must register each employee with the German social insurance system (Sozialversicherung) covering health, pension, unemployment, and care insurance. Combined employer and employee contributions amount to approximately 40% of gross salary.",
+    "trigger": "First employee hired in Germany",
+    "threshold": null,
+    "severity": "high",
+    "source": {
+      "citation": "SGB IV § 28a",
+      "url": "https://www.gesetze-im-internet.de/sgb_4/__28a.html",
+      "retrievedAt": "2024-01-01T00:00:00.000Z",
+      "isLive": false
+    },
+    "confidence": 0.98,
+    "requiresLocalCounsel": false
+  },
+  {
+    "id": "DE-007",
+    "jurisdiction": "DE",
+    "category": "licensing",
+    "title": "EU AI Act Compliance",
+    "description": "AI systems placed on or put into service in the EU market must comply with the EU AI Act risk classification framework. High-risk AI systems (including certain HR and recruitment tools) require conformity assessments, technical documentation, and registration.",
+    "trigger": "Deploying AI system in EU market",
+    "threshold": null,
+    "severity": "high",
+    "source": {
+      "citation": "EU AI Act Art. 4, CELEX: 32024R1689",
+      "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024R1689",
+      "retrievedAt": "2024-01-01T00:00:00.000Z",
+      "isLive": false
+    },
+    "confidence": 0.85,
+    "requiresLocalCounsel": true
+  }
+]

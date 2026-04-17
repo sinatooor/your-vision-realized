@@ -1,0 +1,74 @@
+[
+  {
+    "id": "SE-001",
+    "jurisdiction": "SE",
+    "category": "tax",
+    "title": "F-Tax Registration",
+    "description": "Employers operating in Sweden must register for F-tax (F-skatt) with the Swedish Tax Agency (Skatteverket). F-tax status confirms that the company handles its own tax payments and is required for payroll processing.",
+    "trigger": "Operating as employer in Sweden",
+    "threshold": null,
+    "severity": "medium",
+    "source": {
+      "citation": "Skatteförfarandelagen (2011:1244), Ch. 7",
+      "url": "https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/skatteforfarandelag-20111244_sfs-2011-1244/",
+      "retrievedAt": "2024-01-01T00:00:00.000Z",
+      "isLive": false
+    },
+    "confidence": 0.95,
+    "requiresLocalCounsel": false
+  },
+  {
+    "id": "SE-002",
+    "jurisdiction": "SE",
+    "category": "data",
+    "title": "GDPR — Swedish DPA (IMY) Registration for Special-Category Data",
+    "description": "Processing special-category personal data (health, biometric, union membership, etc.) requires a lawful basis under GDPR Art. 9(2) and may trigger mandatory notification to the Swedish Authority for Privacy Protection (IMY). A Data Protection Officer (DPO) may be required.",
+    "trigger": "Processing special-category data about Swedish residents",
+    "threshold": null,
+    "severity": "medium",
+    "source": {
+      "citation": "GDPR Art. 9; Dataskyddslagen (2018:218)",
+      "url": "https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/dataskyddslag-2018218_sfs-2018-218/",
+      "retrievedAt": "2024-01-01T00:00:00.000Z",
+      "isLive": false
+    },
+    "confidence": 0.93,
+    "requiresLocalCounsel": false
+  },
+  {
+    "id": "SE-003",
+    "jurisdiction": "SE",
+    "category": "tax",
+    "title": "Employer Contributions (Arbetsgivaravgifter)",
+    "description": "Swedish employers must pay social security contributions (arbetsgivaravgifter) on all employee remuneration. The standard rate is 31.42% of gross salary for employees under 65. Contributions fund the Swedish social insurance system.",
+    "trigger": "First employee on Swedish payroll",
+    "threshold": null,
+    "severity": "medium",
+    "source": {
+      "citation": "Socialavgiftslagen (2000:980)",
+      "url": "https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/socialavgiftslag-2000980_sfs-2000-980/",
+      "retrievedAt": "2024-01-01T00:00:00.000Z",
+      "isLive": false
+    },
+    "confidence": 0.98,
+    "requiresLocalCounsel": false
+  },
+  {
+    "id": "SE-004",
+    "jurisdiction": "SE",
+    "category": "employment",
+    "title": "Employment Protection Act (LAS) Compliance",
+    "description": "The Swedish Employment Protection Act (Lagen om anställningsskydd) governs employment contracts, notice periods, and grounds for termination. Fixed-term contracts are restricted; general employment is presumed to be permanent unless otherwise agreed.",
+    "trigger": "Hiring first employee in Sweden",
+    "threshold": null,
+    "severity": "medium",
+    "source": {
+      "citation": "Lagen om anställningsskydd (1982:80) — LAS",
+      "url": "https://www.riksdagen.se/sv/dokument-och-lagar/dokument/svensk-forfattningssamling/lag-198280-om-anstallningsskydd_sfs-1982-80/",
+      "retrievedAt": "2024-01-01T00:00:00.000Z",
+      "isLive": false
+    },
+    "confidence": 0.95,
+    "requiresLocalCounsel": false
+  }
+]

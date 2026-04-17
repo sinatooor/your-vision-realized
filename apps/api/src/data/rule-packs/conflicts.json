@@ -1,0 +1,117 @@
+[
+  {
+    "id": "CONF-001",
+    "name": "GDPR centralised storage vs VN data localisation",
+    "jurisdictionA": "DE",
+    "jurisdictionB": "VN",
+    "categoryA": "data",
+    "categoryB": "data",
+    "twinCondition": "data.centralised === true && data.categories includes 'hr'",
+    "type": "conflict",
+    "severity": "critical",
+    "explanation": "GDPR requires that personal data of EU residents remains within the EEA or is transferred only under adequate safeguards (Art. 44–46). Vietnam's Cybersecurity Law §26 requires that important data about Vietnamese citizens is stored on servers physically located in Vietnam. A centralised data architecture cannot simultaneously satisfy both requirements: any single datastore is either in the EEA (violating VN law) or in Vietnam (violating GDPR transfer restrictions).",
+    "blocksExpansion": true,
+    "mitigationOptions": [
+      {
+        "option": "Data segregation architecture",
+        "description": "Operate separate data stores: EU-resident data remains in EEA-hosted infrastructure; Vietnamese-user data is stored on Vietnam-located servers. Implement SCC-based transfer layer for any necessary cross-border processing.",
+        "operationalImpact": "medium"
+      },
+      {
+        "option": "Defer Vietnam data processing",
+        "description": "Launch in Vietnam without collecting or processing data subject to localisation requirements until architecture can be separated.",
+        "operationalImpact": "low"
+      }
+    ]
+  },
+  {
+    "id": "CONF-002",
+    "name": "UK GDPR adequacy gap post-Brexit",
+    "jurisdictionA": "DE",
+    "jurisdictionB": "GB",
+    "categoryA": "data",
+    "categoryB": "data",
+    "twinCondition": "data.transferFlows contains DE->GB or GB->DE",
+    "type": "tension",
+    "severity": "medium",
+    "explanation": "The EU-UK adequacy decision is in place but subject to periodic review. Data flows between EU and UK require monitoring. UK GDPR is substantively similar to EU GDPR but is a separate legal instrument enforced by the ICO, not EU DPAs.",
+    "blocksExpansion": false,
+    "mitigationOptions": [
+      {
+        "option": "Standard Contractual Clauses (SCCs)",
+        "description": "Implement EU-approved SCCs for EU→UK transfers as a belt-and-braces measure alongside the adequacy decision.",
+        "operationalImpact": "low"
+      }
+    ]
+  },
+  {
+    "id": "CONF-003",
+    "name": "Germany PE risk from EOR headcount",
+    "jurisdictionA": "SE",
+    "jurisdictionB": "DE",
+    "categoryA": "tax",
+    "categoryB": "tax",
+    "twinCondition": "people.hiresByCountry.DE >= 3 && entity.currentByCountry.DE === 'eor'",
+    "type": "conflict",
+    "severity": "high",
+    "explanation": "Three or more employees working in Germany through an EOR creates a strong risk of permanent establishment (PE) under German tax law (§12 AO) and the OECD Model Tax Convention Art. 5. PE exposes the Swedish HQ to Körperschaftsteuer (German corporate income tax) on profits attributable to the German operations. The EOR structure does not reliably prevent PE when the business activity is sustained and the employees have authority to bind the company.",
+    "blocksExpansion": false,
+    "mitigationOptions": [
+      {
+        "option": "Establish German GmbH",
+        "description": "Incorporate a German subsidiary (GmbH). PE is replaced by a taxable entity, which is a known, manageable structure. Requires ~4–6 weeks and €25,000 share capital.",
+        "operationalImpact": "medium"
+      },
+      {
+        "option": "Obtain PE risk opinion",
+        "description": "Engage German tax counsel to assess whether current activity constitutes PE and obtain a documented opinion.",
+        "operationalImpact": "low"
+      }
+    ]
+  },
+  {
+    "id": "CONF-004",
+    "name": "Works council threshold trigger on expansion",
+    "jurisdictionA": "DE",
+    "jurisdictionB": null,
+    "categoryA": "employment",
+    "categoryB": null,
+    "twinCondition": "people.hiresByCountry.DE >= 5",
+    "type": "trigger_risk",
+    "severity": "high",
+    "explanation": "The Betriebsverfassungsgesetz (BetrVG) §1 requires the establishment of a Works Council (Betriebsrat) when a workplace has 5 or more permanent employees. Once formed, the Works Council has co-determination rights over working hours, overtime, short-time work, holiday schedules, and health and safety measures. This is a threshold trigger — it fires at the point the 5th employee joins.",
+    "blocksExpansion": false,
+    "mitigationOptions": [
+      {
+        "option": "Plan for Works Council from day one",
+        "description": "Design employment contracts, onboarding, and HR processes with Works Council co-determination rights in mind before the 5th hire.",
+        "operationalImpact": "low"
+      }
+    ]
+  },
+  {
+    "id": "CONF-005",
+    "name": "GDPR special-category data heightened obligations",
+    "jurisdictionA": "DE",
+    "jurisdictionB": "SE",
+    "categoryA": "data",
+    "categoryB": "data",
+    "twinCondition": "data.categories includes 'hr' or 'special-category'",
+    "type": "dependency",
+    "severity": "high",
+    "explanation": "HR data frequently constitutes special-category data under GDPR Art. 9 (e.g. health data in sick leave records, union membership, biometric data). Processing special-category data requires an explicit legal basis under Art. 9(2), a Data Protection Impact Assessment (DPIA) under Art. 35, and appointment of a Data Protection Officer (DPO) if processing is carried out on a large scale or as a core activity.",
+    "blocksExpansion": false,
+    "mitigationOptions": [
+      {
+        "option": "Conduct DPIA before processing begins",
+        "description": "Commission a Data Protection Impact Assessment as required by GDPR Art. 35 before any special-category HR data is processed.",
+        "operationalImpact": "low"
+      },
+      {
+        "option": "Appoint DPO if required",
+        "description": "Assess whether DPO appointment is mandatory under GDPR Art. 37. If yes, appoint before processing begins.",
+        "operationalImpact": "low"
+      }
+    ]
+  }
+]
