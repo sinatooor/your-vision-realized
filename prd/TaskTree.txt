@@ -1,0 +1,1881 @@
+================================================================================
+JURISDICTIQ — TECHNICAL TASK TREE
+Full-Stack Engineer Build Guide
+Version 1.0 · Hackathon Build · Option A: Law Firm Tooling
+================================================================================
+
+READING THIS DOCUMENT
+─────────────────────
+Each task has:
+  [ID]       Unique task identifier
+  DEPENDS    Task IDs that must be complete before this one starts
+  PRIORITY   P0 = must ship · P1 = ship if P0 done · P2 = stretch
+  EST        Rough time estimate for a senior full-stack engineer
+  OUTPUT     Concrete deliverable that marks the task done
+
+Build order follows the dependency graph strictly.
+If time is short, stop after all P0 tasks. A working P0 build
+wins the hackathon. A broken P2 build loses it.
+
+Total estimated time (P0 only):  ~14–16 hours
+Total estimated time (P0 + P1):  ~20–22 hours
+Total estimated time (all):      ~26–28 hours
+
+================================================================================
+PHASE 0 — PROJECT SETUP
+================================================================================
+
+[T001]
+TITLE:     Initialise monorepo
+DEPENDS:   none
+PRIORITY:  P0
+EST:       30 min
+TASKS:
+  - Create project root: jurisdictiq/
+  - Init Next.js 14 app in jurisdictiq/apps/web/
+      npx create-next-app@latest web --typescript --tailwind --app --no-src-dir
+  - Init Node.js backend in jurisdictiq/apps/api/
+      mkdir api && cd api && npm init -y
+      npm install express typescript ts-node @types/express @types/node
+      npx tsc --init
+  - Create shared types package: jurisdictiq/packages/types/
+      mkdir -p packages/types/src && npm init -y
+  - Create root package.json with workspaces:
+      { "workspaces": ["apps/*", "packages/*"] }
+  - Add .gitignore, .env.example
+  - Add README.md with setup instructions
+OUTPUT:    Both apps start without errors (npm run dev in each)
+
+────────────────────────────────────────────────────────────────────────────────
+
+[T002]
+TITLE:     Environment configuration
+DEPENDS:   T001
+PRIORITY:  P0
+EST:       20 min
+TASKS:
+  - Create jurisdictiq/.env.example with all required keys:
+      ANTHROPIC_API_KEY=
+      OPENSANCTIONS_API_KEY=
+      COMPANIES_HOUSE_API_KEY=
+      NEXT_PUBLIC_API_URL=http://localhost:3001
+  - Create jurisdictiq/apps/api/.env (copy from .env.example, fill in keys)
+  - Create jurisdictiq/apps/web/.env.local
+  - Add dotenv to api: npm install dotenv
+  - Load env in api/src/index.ts on startup
+  - Confirm all keys are accessible in process.env at runtime
+OUTPUT:    console.log of all env keys (not values) shows no undefined
+
+────────────────────────────────────────────────────────────────────────────────
+
+[T003]
+TITLE:     Shared TypeScript types package
+DEPENDS:   T001
+PRIORITY:  P0
+EST:       45 min
+TASKS:
+  Create packages/types/src/index.ts with all core domain types:
+
+  ── ExpansionTwin ──────────────────────────────────────────────
+  export interface Company {
+    name: string
+    hqCountry: string            // ISO 3166-1 alpha-2
+    industry: string
+    size: number
+    productCategory: string
+    hasAiFeatures: boolean
+  }
+
+  export interface PeopleFootprint {
+    hiresByCountry: Record<string, number>   // ISO -> headcount
+    arrangementByCountry: Record<string, 'remote' | 'hybrid' | 'on-site'>
+  }
+
+  export interface DataFootprint {
+    categories: DataCategory[]
+    storageJurisdictions: string[]
+    transferFlows: DataFlow[]
+    centralised: boolean
+  }
+
+  export type DataCategory =
+    | 'hr' | 'customer' | 'financial' | 'health'
+    | 'biometric' | 'special-category' | 'none'
+
+  export interface DataFlow {
+    from: string    // ISO
+    to: string      // ISO
+    categories: DataCategory[]
+  }
+
+  export interface EntityStructure {
+    currentByCountry: Record<string, EntityType>
+  }
+
+  export type EntityType =
+    | 'hq' | 'eor' | 'branch' | 'subsidiary'
+    | 'representative' | 'contractor' | 'none'
+
+  export interface RevenueFootprint {
+    localInvoicingByCountry: Record<string, boolean>
+  }
+
+  export interface ExpansionPlan {
+    targetCountries: string[]
+    timelineDays: number
+    launchDate?: string
+  }
+
+  export interface ExpansionTwin {
+    id: string
+    createdAt: string
+    company: Company
+    expansion: ExpansionPlan
+    people: PeopleFootprint
+    data: DataFootprint
+    entity: EntityStructure
+    revenue: RevenueFootprint
+    rawBrief: string
+  }
+
+  ── Obligation ─────────────────────────────────────────────────
+  export type ObligationCategory =
+    | 'tax' | 'employment' | 'data' | 'licensing'
+    | 'sanctions' | 'corporate'
+
+  export type Severity = 'critical' | 'high' | 'medium' | 'low'
+
+  export interface ObligationSource {
+    citation: string
+    url: string
+    retrievedAt: string
+    isLive: boolean      // true = live API, false = rule pack
+  }
+
+  export interface Obligation {
+    id: string
+    jurisdiction: string
+    category: ObligationCategory
+    title: string
+    description: string
+    trigger: string
+    threshold: string | null
+    severity: Severity
+    source: ObligationSource
+    confidence: number     // 0–1
+    requiresLocalCounsel: boolean
+  }
+
+  ── Conflict ───────────────────────────────────────────────────
+  export type ConflictType =
+    | 'compatible' | 'dependency' | 'tension'
+    | 'conflict' | 'trigger_risk'
+
+  export interface ConflictMitigation {
+    option: string
+    description: string
+    operationalImpact: 'low' | 'medium' | 'high'
+  }
+
+  export interface Conflict {
+    id: string
+    obligationAId: string
+    obligationBId: string
+    type: ConflictType
+    explanation: string
+    impactedTwinFields: string[]
+    mitigationOptions: ConflictMitigation[]
+    severity: Severity
+    blocksExpansion: boolean
+  }
+
+  ── Scenario ───────────────────────────────────────────────────
+  export type ScenarioModel =
+    | 'eor' | 'subsidiary' | 'contractor-first' | 'distributor'
+
+  export interface ScenarioScore {
+    legalRisk: number           // 0–100
+    complianceBurden: number    // 0–100
+    timeToLaunchDays: number
+    operationalComplexity: number  // 0–100
+    confidencePenalty: number   // 0–100
+    total: number               // weighted composite
+  }
+
+  export interface Scenario {
+    id: string
+    model: ScenarioModel
+    label: string
+    description: string
+    assumptions: string[]
+    obligationsTriggered: string[]   // Obligation IDs
+    conflictsResolved: string[]      // Conflict IDs
+    conflictsRemaining: string[]     // Conflict IDs
+    score: ScenarioScore
+    recommended: boolean
+    rationale: string
+  }
+
+  ── Action Plan ────────────────────────────────────────────────
+  export type ActionOwner =
+    | 'partner' | 'associate' | 'local-counsel' | 'client'
+
+  export interface Action {
+    id: string
+    title: string
+    description: string
+    owner: ActionOwner
+    horizon: '0-30' | '31-60' | '61-90'
+    estimatedDays: number
+    dependsOn: string[]     // Action IDs
+    obligationId: string
+    blocking: boolean
+  }
+
+  ── Analysis Result ────────────────────────────────────────────
+  export interface AnalysisResult {
+    id: string
+    twinId: string
+    createdAt: string
+    obligations: Obligation[]
+    conflicts: Conflict[]
+    scenarios: Scenario[]
+    actions: Action[]
+    recommendedScenario: ScenarioModel
+    executiveSummary: string
+    memoMarkdown: string
+  }
+
+  ── Agent Stream Event ─────────────────────────────────────────
+  export type AgentEventType =
+    | 'agent_start' | 'agent_complete'
+    | 'api_call' | 'api_result'
+    | 'conflict_detected' | 'scenario_scored'
+    | 'memo_ready' | 'error'
+
+  export interface AgentEvent {
+    type: AgentEventType
+    agent: string
+    message: string
+    data?: unknown
+    timestamp: string
+  }
+
+OUTPUT:    packages/types builds with tsc --noEmit without errors
+
+================================================================================
+PHASE 1 — BACKEND: CORE API SERVER
+================================================================================
+
+[T004]
+TITLE:     Express API server skeleton
+DEPENDS:   T002, T003
+PRIORITY:  P0
+EST:       30 min
+TASKS:
+  - Create apps/api/src/index.ts:
+      import express from 'express'
+      import cors from 'cors'
+      import { router } from './routes'
+      const app = express()
+      app.use(cors({ origin: process.env.NEXT_PUBLIC_WEB_URL || '*' }))
+      app.use(express.json())
+      app.use('/api', router)
+      app.listen(3001)
+  - Create apps/api/src/routes/index.ts as router mounting point
+  - Add npm scripts:
+      "dev": "ts-node-dev --respawn src/index.ts"
+      "build": "tsc"
+  - Install: npm install cors @types/cors ts-node-dev
+  - Confirm server starts and GET /api/health returns { ok: true }
+OUTPUT:    curl http://localhost:3001/api/health returns 200
+
+────────────────────────────────────────────────────────────────────────────────
+
+[T005]
+TITLE:     Anthropic Claude client wrapper
+DEPENDS:   T004
+PRIORITY:  P0
+EST:       30 min
+TASKS:
+  - npm install @anthropic-ai/sdk
+  - Create apps/api/src/lib/claude.ts:
+      import Anthropic from '@anthropic-ai/sdk'
+      export const claude = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+      export async function extractStructured<T>(
+        systemPrompt: string,
+        userPrompt: string,
+        schema: string
+      ): Promise<T> {
+        const response = await claude.messages.create({
+          model: 'claude-sonnet-4-5',
+          max_tokens: 4096,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: userPrompt }]
+        })
+        const text = response.content[0].type === 'text' ? response.content[0].text : ''
+        // Strip markdown fences if present
+        const clean = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+        return JSON.parse(clean) as T
+      }
+
+      export async function generateText(
+        systemPrompt: string,
+        userPrompt: string,
+        maxTokens = 2048
+      ): Promise<string> {
+        const response = await claude.messages.create({
+          model: 'claude-sonnet-4-5',
+          max_tokens: maxTokens,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: userPrompt }]
+        })
+        return response.content[0].type === 'text' ? response.content[0].text : ''
+      }
+  - Add error handling: catch Anthropic API errors, throw typed AppError
+OUTPUT:    Unit test: extractStructured returns parsed JSON from a test prompt
+
+────────────────────────────────────────────────────────────────────────────────
+
+[T006]
+TITLE:     SSE streaming infrastructure
+DEPENDS:   T004
+PRIORITY:  P0
+EST:       45 min
+TASKS:
+  - Create apps/api/src/lib/sse.ts:
+      import { Response } from 'express'
+      import { AgentEvent } from '@jurisdictiq/types'
+
+      export class SSEStream {
+        constructor(private res: Response) {
+          res.setHeader('Content-Type', 'text/event-stream')
+          res.setHeader('Cache-Control', 'no-cache')
+          res.setHeader('Connection', 'keep-alive')
+          res.setHeader('X-Accel-Buffering', 'no')
+          res.flushHeaders()
+        }
+
+        emit(event: AgentEvent): void {
+          this.res.write(`data: ${JSON.stringify(event)}\n\n`)
+        }
+
+        close(): void {
+          this.res.write('data: [DONE]\n\n')
+          this.res.end()
+        }
+      }
+
+  - Create helper: emitAgent(stream, agent, message, data?) that fills timestamp
+  - Add heartbeat: setInterval sending a comment ': ping\n\n' every 15s
+  - Create apps/web/src/lib/useAgentStream.ts:
+      React hook that opens an EventSource to the API SSE endpoint,
+      parses AgentEvent JSON, appends to a state array,
+      handles [DONE] by setting isComplete = true,
+      cleans up EventSource on unmount
+OUTPUT:    Test endpoint GET /api/test-stream emits 5 events, client hook
+           renders them in order
+
+================================================================================
+PHASE 2 — BACKEND: EXTERNAL API INTEGRATIONS
+================================================================================
+
+[T007]
+TITLE:     EUR-Lex CELLAR SPARQL integration
+DEPENDS:   T005
+PRIORITY:  P0
+EST:       1.5 hours
+TASKS:
+  - Create apps/api/src/integrations/eurlex.ts
+  - Base URL: https://publications.europa.eu/webapi/rdf/sparql
+  - Implement fetchLegislationText(celexNumber: string): Promise<string>
+      Build SPARQL query:
+        PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
+        SELECT ?title ?text WHERE {
+          ?work cdm:resource_legal_id_celex "${celexNumber}" .
+          ?work cdm:title ?title .
+          OPTIONAL { ?work cdm:content ?text }
+        }
+      POST to endpoint with Accept: application/sparql-results+json
+      Extract and return first result's text value
+  - Implement fetchByKeyword(keyword: string, jurisdiction: string): Promise<EurLexResult[]>
+      Use SPARQL FILTER + CONTAINS to search by keyword
+      Return array of { celexNumber, title, summary, url }
+  - Implement a local cache: Map<string, { data, cachedAt }>
+      Cache TTL: 1 hour
+      Always try cache first, fallback to live call
+      Log whether result is live or cached in AgentEvent
+  - Key CELEX numbers to pre-test:
+      32016R0679  → GDPR
+      32024R1689  → EU AI Act
+      32022L2464  → CSRD
+      32021R0821  → DAC7
+  - Handle rate limiting: if 429, wait 2s and retry once
+  - If SPARQL fails entirely, fall back to rule pack (see T012)
+OUTPUT:    fetchLegislationText('32016R0679') returns GDPR text excerpt
+
+────────────────────────────────────────────────────────────────────────────────
+
+[T008]
+TITLE:     OpenSanctions entity screening integration
+DEPENDS:   T005
+PRIORITY:  P0
+EST:       45 min
+TASKS:
+  - Create apps/api/src/integrations/opensanctions.ts
+  - Base URL: https://api.opensanctions.org
+  - API key: Bearer token from process.env.OPENSANCTIONS_API_KEY
+  - Implement screenEntity(name: string, country?: string): Promise<ScreeningResult>
+      POST /match/default
+      Body: { queries: { entity: { schema: 'Person', properties: { name: [name], country: [country] } } } }
+      Parse response: extract results[0].results array
+      Return:
+        {
+          name: string,
+          matched: boolean,
+          matchCount: number,
+          highestScore: number,
+          matches: Array<{ entity, score, datasets }>
+          isClean: boolean   // true if no match score > 0.7
+        }
+  - Implement screenMultiple(entities: string[]): Promise<ScreeningResult[]>
+      Batch into single request using multiple queries object keys
+  - Add result to agent stream with emitAgent
+  - Handle API key missing: skip screening, emit warning event
+OUTPUT:    screenEntity('Vladimir Putin') returns matched: true
+
+────────────────────────────────────────────────────────────────────────────────
+
+[T009]
+TITLE:     GLEIF LEI corporate structure integration
+DEPENDS:   T005
+PRIORITY:  P0
+EST:       45 min
+TASKS:
+  - Create apps/api/src/integrations/gleif.ts
+  - Base URL: https://api.gleif.org/api/v1
+  - No auth required
+  - Implement searchEntity(name: string): Promise<GleifEntity[]>
+      GET /lei-records?filter[entity.legalName]={name}&page[size]=5
+      Return array of { lei, legalName, jurisdiction, status, parentLei }
+  - Implement getEntityByLei(lei: string): Promise<GleifEntity>
+      GET /lei-records/{lei}
+  - Implement resolveParentChain(lei: string): Promise<GleifEntity[]>
+      GET /lei-records/{lei}/ultimate-parent-relationship
+      Recursively build parent chain up to 3 levels
+  - Return structured object:
+      { entity, parent, ultimateParent, jurisdictions, sanctionsRisk }
+  - Cache results for 1 hour
+OUTPUT:    searchEntity('Spotify AB') returns LEI and Swedish jurisdiction
+
+────────────────────────────────────────────────────────────────────────────────
+
+[T010]
+TITLE:     EU VIES VAT validation integration
+DEPENDS:   T005
+PRIORITY:  P0
+EST:       30 min
+TASKS:
+  - Create apps/api/src/integrations/vies.ts
+  - Use SOAP API: https://ec.europa.eu/taxation_customs/vies/services/checkVatService
+  - Or use REST wrapper: https://ec.europa.eu/taxation_customs/vies/rest-api/ms/{countryCode}/vat/{vatNumber}
+  - Implement validateVat(countryCode: string, vatNumber: string): Promise<VatResult>
+      GET /rest-api/ms/{countryCode}/vat/{vatNumber}
+      Return { valid: boolean, name: string, address: string, countryCode }
+  - Implement checkEuPresence(company: Company): Promise<VatPresenceResult>
+      For each EU country, check if company has registered VAT
+      Return map of country → vatRegistered
+      This feeds PE risk assessment in conflict engine
+  - Handle service unavailable gracefully: return { valid: null, error: 'VIES unavailable' }
+OUTPUT:    validateVat('DE', '123456789') returns a valid/invalid result
+
+────────────────────────────────────────────────────────────────────────────────
+
+[T011]
+TITLE:     Companies House UK integration
+DEPENDS:   T005
+PRIORITY:  P1
+EST:       30 min
+TASKS:
+  - Create apps/api/src/integrations/companieshouse.ts
+  - Base URL: https://api.company-information.service.gov.uk
+  - Auth: Basic auth with API key as username, empty password
+  - Implement searchCompany(name: string): Promise<CHCompany[]>
+      GET /search/companies?q={name}&items_per_page=5
+  - Implement getCompany(companyNumber: string): Promise<CHCompanyDetail>
+      GET /company/{companyNumber}
+      Returns status, type, registered address, SIC codes
+  - Implement getOfficers(companyNumber: string): Promise<CHOfficer[]>
+      GET /company/{companyNumber}/officers
+  - Used only when UK (GB) is a target or home jurisdiction
+OUTPUT:    searchCompany('Revolut') returns company number and status
+
+================================================================================
+PHASE 3 — BACKEND: RULE PACKS
+================================================================================
+
+[T012]
+TITLE:     Jurisdiction rule packs (static data)
+DEPENDS:   T003
+PRIORITY:  P0
+EST:       2.5 hours
+TASKS:
+  Create apps/api/src/data/rule-packs/ directory.
+  Each file is a JSON array of Obligation objects.
+  These are the fallback when live APIs don't cover a jurisdiction.
+  Label every obligation with isLive: false in source.
+
+  ── FILE: de.json (Germany) ────────────────────────────────────
+  Include obligations for:
+  1. Permanent Establishment (PE) risk
+     trigger: "First employee hired or sustained business activity"
+     threshold: "Sustained presence or dependent agent"
+     severity: "critical"
+     citation: "§ 12 AO (Abgabenordnung) + OECD Model Tax Convention Art. 5"
+     category: "tax"
+
+  2. Works Council (Betriebsrat)
+     trigger: "5th employee hired"
+     threshold: "5 employees"
+     severity: "high"
+     citation: "Betriebsverfassungsgesetz (BetrVG) § 1"
+     category: "employment"
+
+  3. GDPR Art. 28 Data Processing Agreement
+     trigger: "Any processing of EU personal data by a processor"
+     threshold: null
+     severity: "high"
+     citation: "GDPR Art. 28, CELEX: 32016R0679"
+     category: "data"
+
+  4. Impressumspflicht (German imprint requirement)
+     trigger: "Operating a commercial website accessible in Germany"
+     severity: "medium"
+     citation: "Telemediengesetz (TMG) § 5"
+     category: "licensing"
+
+  5. Local payroll registration
+     trigger: "First payroll employee in Germany"
+     severity: "high"
+     citation: "Einkommensteuergesetz (EStG) § 38"
+     category: "tax"
+
+  6. Social insurance registration
+     trigger: "First employee hired"
+     severity: "high"
+     citation: "SGB IV § 28a"
+     category: "employment"
+
+  7. EU AI Act compliance (if product has AI features)
+     trigger: "Deploying AI system in EU market"
+     severity: "high"
+     citation: "EU AI Act Art. 4, CELEX: 32024R1689"
+     category: "licensing"
+
+  ── FILE: vn.json (Vietnam) ────────────────────────────────────
+  1. Data localisation — Cybersecurity Law
+     trigger: "Storing or processing Vietnamese user data"
+     threshold: null
+     severity: "critical"
+     description: "Important data about Vietnamese citizens must be stored on servers
+                   located in Vietnam. Cross-border transfer restricted."
+     citation: "Law on Cybersecurity 2018, Art. 26; Decree 13/2023/ND-CP"
+     category: "data"
+
+  2. Business licence (Certificate of Investment Registration)
+     trigger: "Establishing a legal presence in Vietnam"
+     severity: "high"
+     citation: "Law on Investment 2020, Art. 37"
+     category: "corporate"
+
+  3. Representative office registration
+     trigger: "Opening a representative office"
+     severity: "high"
+     citation: "Commercial Law 2005, Art. 49"
+     category: "corporate"
+
+  4. Personal Income Tax (PIT) registration for employees
+     trigger: "First locally-employed person"
+     severity: "high"
+     citation: "Law on Personal Income Tax 2007 (amended)"
+     category: "tax"
+
+  5. Social insurance registration
+     trigger: "First employee with Vietnamese labour contract"
+     threshold: "1 employee"
+     severity: "high"
+     citation: "Law on Social Insurance 2014, Art. 2"
+     category: "employment"
+
+  6. Work permit for foreign employees
+     trigger: "Deploying foreign national to work in Vietnam"
+     severity: "high"
+     citation: "Labour Code 2019, Art. 151"
+     category: "employment"
+
+  ── FILE: se.json (Sweden — home jurisdiction) ─────────────────
+  1. F-tax registration
+     trigger: "Operating as employer"
+     severity: "medium"
+     citation: "Skatteförfarandelagen (2011:1244)"
+     category: "tax"
+
+  2. GDPR — Swedish DPA (IMY) registration
+     trigger: "Processing special-category data"
+     severity: "medium"
+     citation: "GDPR Art. 9; Dataskyddslagen (2018:218)"
+     category: "data"
+
+  3. Employer contributions (arbetsgivaravgifter)
+     trigger: "First employee on Swedish payroll"
+     severity: "medium"
+     citation: "Socialavgiftslagen (2000:980)"
+     category: "tax"
+
+  ── FILE: gb.json (United Kingdom) ─────────────────────────────
+  1. UK GDPR compliance
+     trigger: "Processing personal data of UK residents"
+     severity: "high"
+     citation: "UK GDPR; Data Protection Act 2018"
+     category: "data"
+
+  2. ICO registration
+     trigger: "Processing personal data for commercial purposes"
+     severity: "high"
+     citation: "Data Protection Act 2018, Part 2"
+     category: "licensing"
+
+  3. IR35 contractor assessment
+     trigger: "Engaging contractors who work primarily for one client"
+     severity: "medium"
+     citation: "Income Tax (Earnings and Pensions) Act 2003, Chapter 8"
+     category: "employment"
+
+  4. PAYE and NI registration
+     trigger: "First UK payroll employee"
+     severity: "high"
+     citation: "Income Tax (Earnings and Pensions) Act 2003"
+     category: "tax"
+
+  ── FILE: sg.json (Singapore) ──────────────────────────────────
+  1. PDPA compliance
+     trigger: "Collecting or processing personal data of Singapore residents"
+     severity: "medium"
+     citation: "Personal Data Protection Act 2012 (PDPA), s. 24"
+     category: "data"
+
+  2. ACRA business registration
+     trigger: "Establishing local business presence"
+     severity: "high"
+     citation: "Companies Act 1967, s. 4"
+     category: "corporate"
+
+  3. Employment Pass for foreign hires
+     trigger: "Hiring foreign professionals earning above S$5,000/month"
+     threshold: "S$5,000/month salary"
+     severity: "medium"
+     citation: "Employment of Foreign Manpower Act"
+     category: "employment"
+
+  4. CPF contributions
+     trigger: "Hiring Singapore citizen or PR employees"
+     severity: "high"
+     citation: "Central Provident Fund Act 1953"
+     category: "employment"
+
+  ── FILE: conflicts.json (cross-jurisdiction conflict rules) ───
+  This is the CONFLICT RULE SET used by the deterministic engine (T015).
+  Each rule defines a pair of obligation patterns and their relationship.
+
+  [
+    {
+      "id": "CONF-001",
+      "name": "GDPR centralised storage vs VN data localisation",
+      "jurisdictionA": "DE",
+      "jurisdictionB": "VN",
+      "categoryA": "data",
+      "categoryB": "data",
+      "twinCondition": "data.centralised === true && data.categories includes 'hr'",
+      "type": "conflict",
+      "severity": "critical",
+      "explanation": "GDPR requires that personal data of EU residents remains within the EEA or is transferred only under adequate safeguards (Art. 44–46). Vietnam's Cybersecurity Law §26 requires that important data about Vietnamese citizens is stored on servers physically located in Vietnam. A centralised data architecture cannot simultaneously satisfy both requirements: any single datastore is either in the EEA (violating VN law) or in Vietnam (violating GDPR transfer restrictions).",
+      "blocksExpansion": true,
+      "mitigationOptions": [
+        {
+          "option": "Data segregation architecture",
+          "description": "Operate separate data stores: EU-resident data remains in EEA-hosted infrastructure; Vietnamese-user data is stored on Vietnam-located servers. Implement SCC-based transfer layer for any necessary cross-border processing.",
+          "operationalImpact": "medium"
+        },
+        {
+          "option": "Defer Vietnam data processing",
+          "description": "Launch in Vietnam without collecting or processing data subject to localisation requirements until architecture can be separated.",
+          "operationalImpact": "low"
+        }
+      ]
+    },
+    {
+      "id": "CONF-002",
+      "name": "UK GDPR adequacy gap post-Brexit",
+      "jurisdictionA": "DE",
+      "jurisdictionB": "GB",
+      "categoryA": "data",
+      "categoryB": "data",
+      "twinCondition": "data.transferFlows contains DE->GB or GB->DE",
+      "type": "tension",
+      "severity": "medium",
+      "explanation": "The EU-UK adequacy decision is in place but subject to periodic review. Data flows between EU and UK require monitoring. UK GDPR is substantively similar to EU GDPR but is a separate legal instrument enforced by the ICO, not EU DPAs.",
+      "blocksExpansion": false,
+      "mitigationOptions": [
+        {
+          "option": "Standard Contractual Clauses (SCCs)",
+          "description": "Implement EU-approved SCCs for EU→UK transfers as a belt-and-braces measure alongside the adequacy decision.",
+          "operationalImpact": "low"
+        }
+      ]
+    },
+    {
+      "id": "CONF-003",
+      "name": "Germany PE risk from EOR headcount",
+      "jurisdictionA": "SE",
+      "jurisdictionB": "DE",
+      "categoryA": "tax",
+      "categoryB": "tax",
+      "twinCondition": "people.hiresByCountry.DE >= 3 && entity.currentByCountry.DE === 'eor'",
+      "type": "conflict",
+      "severity": "high",
+      "explanation": "Three or more employees working in Germany through an EOR creates a strong risk of permanent establishment (PE) under German tax law (§12 AO) and the OECD Model Tax Convention Art. 5. PE exposes the Swedish HQ to Körperschaftsteuer (German corporate income tax) on profits attributable to the German operations. The EOR structure does not reliably prevent PE when the business activity is sustained and the employees have authority to bind the company.",
+      "blocksExpansion": false,
+      "mitigationOptions": [
+        {
+          "option": "Establish German GmbH",
+          "description": "Incorporate a German subsidiary (GmbH). PE is replaced by a taxable entity, which is a known, manageable structure. Requires ~4–6 weeks and €25,000 share capital.",
+          "operationalImpact": "medium"
+        },
+        {
+          "option": "Obtain PE risk opinion",
+          "description": "Engage German tax counsel to assess whether current activity constitutes PE and obtain a documented opinion.",
+          "operationalImpact": "low"
+        }
+      ]
+    },
+    {
+      "id": "CONF-004",
+      "name": "Works council threshold trigger on expansion",
+      "jurisdictionA": "DE",
+      "jurisdictionB": null,
+      "categoryA": "employment",
+      "categoryB": null,
+      "twinCondition": "people.hiresByCountry.DE + existingDE >= 5",
+      "type": "trigger_risk",
+      "severity": "high",
+      "explanation": "The Betriebsverfassungsgesetz (BetrVG) §1 requires the establishment of a Works Council (Betriebsrat) when a workplace has 5 or more permanent employees. Once formed, the Works Council has co-determination rights over working hours, overtime, short-time work, holiday schedules, and health and safety measures. This is a threshold trigger — it fires at the point the 5th employee joins.",
+      "blocksExpansion": false,
+      "mitigationOptions": [
+        {
+          "option": "Plan for Works Council from day one",
+          "description": "Design employment contracts, onboarding, and HR processes with Works Council co-determination rights in mind before the 5th hire.",
+          "operationalImpact": "low"
+        }
+      ]
+    },
+    {
+      "id": "CONF-005",
+      "name": "GDPR special-category data heightened obligations",
+      "jurisdictionA": "DE",
+      "jurisdictionB": "SE",
+      "categoryA": "data",
+      "categoryB": "data",
+      "twinCondition": "data.categories includes 'hr' or 'special-category'",
+      "type": "dependency",
+      "severity": "high",
+      "explanation": "HR data frequently constitutes special-category data under GDPR Art. 9 (e.g. health data in sick leave records, union membership, biometric data). Processing special-category data requires an explicit legal basis under Art. 9(2), a Data Protection Impact Assessment (DPIA) under Art. 35, and appointment of a Data Protection Officer (DPO) if processing is carried out on a large scale or as a core activity.",
+      "blocksExpansion": false,
+      "mitigationOptions": [
+        {
+          "option": "Conduct DPIA before processing begins",
+          "description": "Commission a Data Protection Impact Assessment as required by GDPR Art. 35 before any special-category HR data is processed.",
+          "operationalImpact": "low"
+        },
+        {
+          "option": "Appoint DPO if required",
+          "description": "Assess whether DPO appointment is mandatory under GDPR Art. 37. If yes, appoint before processing begins.",
+          "operationalImpact": "low"
+        }
+      ]
+    }
+  ]
+
+OUTPUT:    All rule pack JSON files parse without errors.
+           Each file contains ≥4 valid Obligation objects.
+           conflicts.json contains ≥5 conflict rules.
+
+================================================================================
+PHASE 4 — BACKEND: AI AGENTS
+================================================================================
+
+[T013]
+TITLE:     Agent 1 — Intake & Expansion Twin extraction
+DEPENDS:   T005, T003, T012
+PRIORITY:  P0
+EST:       1.5 hours
+TASKS:
+  - Create apps/api/src/agents/agent1-intake.ts
+  - Function signature:
+      extractExpansionTwin(brief: string, stream: SSEStream): Promise<ExpansionTwin>
+
+  - Emit: agent_start event with agent='Agent 1 — Intake'
+
+  - Build system prompt:
+      "You are a legal intelligence extraction system. Extract structured business
+       facts from lawyer-provided client briefs. Return ONLY valid JSON matching
+       the ExpansionTwin schema. No prose, no markdown fences, no explanation.
+       If a field cannot be determined, use null or [] or {}.
+       For hiresByCountry, use ISO 3166-1 alpha-2 codes (DE, VN, GB, SE, SG).
+       For industry, use plain English (e.g. 'HR SaaS', 'Fintech', 'E-commerce').
+       For dataCategories, choose from: hr, customer, financial, health,
+       biometric, special-category, none."
+
+  - Build user prompt including the raw brief and the TypeScript interface
+    as schema documentation
+
+  - Call extractStructured<ExpansionTwin>(systemPrompt, userPrompt, schema)
+
+  - Generate a UUID for twin.id, set twin.createdAt to now
+
+  - Emit: agent_complete event with message='Expansion Twin extracted'
+    and data = { fieldCount, targetCountries, hireCount }
+
+  - Return the ExpansionTwin
+
+  - Error handling:
+      If JSON parse fails, emit error event and throw
+      If required fields missing, emit warning and use safe defaults
+
+OUTPUT:    Given brief "Swedish HR SaaS, 50 employees, expanding to DE and VN,
+           3 hires each, centralised HR data, local invoicing in Germany",
+           returns valid ExpansionTwin with:
+             company.hqCountry: 'SE'
+             expansion.targetCountries: ['DE', 'VN']
+             people.hiresByCountry: { DE: 3, VN: 3 }
+             data.categories: ['hr']
+             data.centralised: true
+             revenue.localInvoicingByCountry: { DE: true }
+
+────────────────────────────────────────────────────────────────────────────────
+
+[T014]
+TITLE:     Agent 2 — Jurisdiction Scout (parallel retrieval)
+DEPENDS:   T005, T007, T008, T009, T010, T012
+PRIORITY:  P0
+EST:       2 hours
+TASKS:
+  - Create apps/api/src/agents/agent2-scout.ts
+  - Function signature:
+      scoutJurisdictions(twin: ExpansionTwin, stream: SSEStream): Promise<Obligation[]>
+
+  - For each country in [twin.company.hqCountry, ...twin.expansion.targetCountries]:
+
+    a. Load rule pack from data/rule-packs/{iso}.json
+       Filter obligations by relevance to twin:
+         - If data.categories does not include 'hr', skip HR-specific obligations
+         - If company.hasAiFeatures is false, skip AI Act obligations
+         - If people.hiresByCountry[country] is 0, skip employment obligations
+         - If revenue.localInvoicingByCountry[country] is false, reduce VAT urgency
+
+    b. For DE and SE targets: attempt EUR-Lex SPARQL for key CELEX numbers
+       Map obligation → CELEX number (maintain hardcoded map):
+         GDPR → 32016R0679
+         AI Act → 32024R1689
+         CSRD → 32022L2464
+       Emit api_call event before each call
+       Emit api_result event with success/failure and isLive flag
+       If live, update obligation.source.isLive = true, source.retrievedAt = now
+       If SPARQL fails, keep rule pack obligation, log warning
+
+    c. Emit api_call event for OpenSanctions
+       Screen company name + any named directors from brief
+       Emit api_result with match count and isClean boolean
+
+    d. Emit api_call for GLEIF if company name extractable
+       Resolve LEI, parent jurisdiction
+       Emit api_result with entity found/not found
+
+  - Fan-out: use Promise.allSettled for parallel country processing
+    Do NOT await sequentially — all countries run simultaneously
+
+  - Deduplicate obligations: same title + jurisdiction = keep highest confidence
+
+  - Emit agent_complete with total obligation count by country and category
+
+  - Return flat array of all obligations
+
+OUTPUT:    Given twin with DE + VN targets:
+           Returns ≥8 obligations total
+           At least 1 obligation has isLive: true (EUR-Lex)
+           At least 1 OpenSanctions result emitted
+           GLEIF call emitted
+
+────────────────────────────────────────────────────────────────────────────────
+
+[T015]
+TITLE:     Agent 3 — Conflict Engine (deterministic)
+DEPENDS:   T012, T014
+PRIORITY:  P0
+EST:       2 hours
+TASKS:
+  - Create apps/api/src/agents/agent3-conflicts.ts
+  - Function signature:
+      detectConflicts(
+        twin: ExpansionTwin,
+        obligations: Obligation[],
+        stream: SSEStream
+      ): Promise<Conflict[]>
+
+  - Load conflict rules from data/rule-packs/conflicts.json
+
+  - For each conflict rule:
+    a. Evaluate twinCondition against the twin object
+       Use a safe evaluator — NOT eval(). Instead write a typed evaluator:
+         function evaluateCondition(rule: ConflictRule, twin: ExpansionTwin): boolean
+         Each condition is a switch on rule.id with explicit TypeScript logic.
+         Example for CONF-001:
+           case 'CONF-001':
+             return twin.data.centralised === true
+               && twin.data.categories.includes('hr')
+               && twin.expansion.targetCountries.includes('DE')
+               && twin.expansion.targetCountries.includes('VN')
+
+    b. If condition is true, find matching obligations:
+         obligationA: obligations.find(o => o.jurisdiction === rule.jurisdictionA
+                                       && o.category === rule.categoryA)
+         obligationB: rule.jurisdictionB
+           ? obligations.find(o => o.jurisdiction === rule.jurisdictionB
+                               && o.category === rule.categoryB)
+           : null
+
+    c. Generate conflict ID, fill in obligationAId, obligationBId from found obligations
+
+    d. Emit conflict_detected event with:
+         conflictId, type, severity, blocksExpansion, short summary
+
+    e. Use Claude to generate plain-English explanation if rule.explanation is null
+       (For hackathon, all rules have hardcoded explanations — Claude fallback for
+        any future dynamic conflicts)
+
+  - Sort conflicts: critical first, then high, medium, low
+
+  - Emit agent_complete with total conflict count by severity
+
+  - Return array of Conflict objects
+
+  IMPORTANT: This agent must be deterministic. The same twin always produces the
+  same conflicts. Do not use LLM for conflict detection — only for explanation
+  text generation if needed.
+
+OUTPUT:    Given twin with DE + VN + centralised HR data:
+           CONF-001 (critical) detected
+           CONF-003 (high) detected if DE hires >= 3
+           CONF-004 (high) detected if total DE headcount >= 5
+           CONF-005 (high) detected if data.categories includes 'hr'
+
+────────────────────────────────────────────────────────────────────────────────
+
+[T016]
+TITLE:     Agent 4 — Scenario Simulator
+DEPENDS:   T005, T015
+PRIORITY:  P0
+EST:       1.5 hours
+TASKS:
+  - Create apps/api/src/agents/agent4-scenarios.ts
+  - Function signature:
+      simulateScenarios(
+        twin: ExpansionTwin,
+        obligations: Obligation[],
+        conflicts: Conflict[],
+        stream: SSEStream
+      ): Promise<Scenario[]>
+
+  - Define 4 base scenarios with hardcoded assumptions:
+
+    SCENARIO: eor
+      label: 'Employer of Record (EOR)'
+      description: 'Hire through a third-party EOR in each target jurisdiction.
+                    No local entity required. Faster to launch, higher per-head cost.'
+      assumptions: [
+        'EOR provider available in all target jurisdictions',
+        'No plans to invoice locally through own entity',
+        'Headcount remains below PE trigger thresholds'
+      ]
+
+    SCENARIO: subsidiary
+      label: 'Local Subsidiary'
+      description: 'Incorporate a wholly-owned subsidiary in each target jurisdiction.
+                    Full legal presence. Higher setup cost and compliance burden.'
+      assumptions: [
+        'Company has capital available for incorporation',
+        'Willing to wait 4–8 weeks for entity setup',
+        'Plans to invoice locally through own entity'
+      ]
+
+    SCENARIO: contractor-first
+      label: 'Contractor-First'
+      description: 'Engage local freelancers/contractors initially. Transition to
+                    employment or entity once commercial viability is confirmed.'
+      assumptions: [
+        'Contractors are genuinely independent (IR35/re-classification risk assessed)',
+        'Initial engagement is ≤12 months',
+        'No special-category data processed by contractors'
+      ]
+
+    SCENARIO: distributor
+      label: 'Distributor / Reseller Model'
+      description: 'Partner with a local distributor or reseller. No local employment.
+                    Market entry via third-party commercial agreement.'
+      assumptions: [
+        'Product can be sold via third-party channel',
+        'Transfer pricing documentation required',
+        'No local data processing by own entity'
+      ]
+
+  - For each scenario, compute ScenarioScore:
+
+    legalRisk:
+      Base score starts at 0.
+      Add 25 for each critical conflict that is NOT resolved by this scenario.
+      Add 15 for each high conflict not resolved.
+      Add 5 for each medium conflict not resolved.
+      Cap at 100.
+
+      Which conflicts each scenario resolves:
+        eor: resolves CONF-003 (no PE from entity) IF hires < 5
+             does NOT resolve CONF-001 (data architecture conflict)
+        subsidiary: resolves CONF-003 (PE managed via entity)
+                    does NOT resolve CONF-001
+        contractor-first: resolves CONF-003, CONF-004 (no employee threshold)
+                          does NOT resolve CONF-001
+        distributor: resolves CONF-003, CONF-004
+                     partially resolves CONF-001 (no local data processing)
+
+    complianceBurden:
+      eor: 30 (low — EOR handles local compliance)
+      subsidiary: 80 (high — full local compliance stack)
+      contractor-first: 20 (lowest)
+      distributor: 25 (low)
+
+    timeToLaunchDays:
+      eor: 14
+      subsidiary: 45
+      contractor-first: 7
+      distributor: 30
+
+    operationalComplexity:
+      eor: 40
+      subsidiary: 75
+      contractor-first: 20
+      distributor: 35
+
+    confidencePenalty:
+      Count obligations with confidence < 0.8 assigned to this scenario.
+      penalty = count * 5, cap at 20.
+
+    total (weighted):
+      legalRisk * 0.35
+      + complianceBurden * 0.25
+      + (timeToLaunchDays / 90 * 100) * 0.20
+      + operationalComplexity * 0.10
+      + confidencePenalty * 0.10
+
+  - Mark recommended: true on scenario with lowest total score
+
+  - Use Claude to generate rationale string for each scenario:
+      "Given [twin summary], this scenario [resolves/does not resolve] the
+       [conflict names] because [brief reason]. Estimated launch: [N] days."
+
+  - Emit scenario_scored event for each scenario
+
+  - Emit agent_complete with recommended scenario model
+
+  - Return array of Scenario objects sorted by total score ascending
+
+OUTPUT:    4 scenarios returned, each with valid score.
+           contractor-first or eor is recommended for demo twin.
+           Scenario scores differ meaningfully (not all the same).
+
+────────────────────────────────────────────────────────────────────────────────
+
+[T017]
+TITLE:     Agent 5 — Resolution Planner (30/60/90-day plan)
+DEPENDS:   T005, T016
+PRIORITY:  P1
+EST:       1.5 hours
+TASKS:
+  - Create apps/api/src/agents/agent5-planner.ts
+  - Function signature:
+      planResolution(
+        twin: ExpansionTwin,
+        recommendedScenario: Scenario,
+        conflicts: Conflict[],
+        obligations: Obligation[],
+        stream: SSEStream
+      ): Promise<Action[]>
+
+  - Build a prompt for Claude that includes:
+      - Summary of the twin
+      - Recommended scenario model and rationale
+      - List of all critical and high conflicts with their mitigationOptions
+      - List of all obligations for target jurisdictions
+      - Instruction to produce a 30/60/90-day action plan as JSON array of Action objects
+      - Explicitly list the Action TypeScript interface in the prompt
+      - Instruct Claude to sequence actions respecting dependencies:
+          e.g. Entity registration must precede local employment contracts
+          DPIA must precede data processing
+          EOR engagement must precede first hire
+
+  - Parse Claude response as Action[]
+
+  - Validate: each action has title, owner, horizon, obligationId
+    If obligationId references unknown obligation, set to first matching category
+
+  - Emit agent_complete with action count by horizon
+
+  - Return sorted actions: blocking first within each horizon
+
+OUTPUT:    ≥9 actions returned (≥3 per horizon).
+           At least 1 blocking action in 0–30 days.
+           All critical conflict mitigations appear as actions.
+
+────────────────────────────────────────────────────────────────────────────────
+
+[T018]
+TITLE:     Agent 6 — Memo Writer
+DEPENDS:   T005, T017
+PRIORITY:  P1
+EST:       1.5 hours
+TASKS:
+  - Create apps/api/src/agents/agent6-memo.ts
+  - Function signature:
+      generateMemo(
+        twin: ExpansionTwin,
+        obligations: Obligation[],
+        conflicts: Conflict[],
+        scenarios: Scenario[],
+        actions: Action[],
+        stream: SSEStream
+      ): Promise<{ executiveSummary: string, memoMarkdown: string }>
+
+  - Build system prompt:
+      "You are a senior partner at an international law firm writing a client
+       advisory memo. Write in clear, precise legal English. No hedging or
+       filler. Every claim must reference a cited source. Use the citation
+       format: [Jurisdiction — Source Name, Citation Reference].
+       Structure: Executive Summary, Conflict Analysis, Recommended Structure,
+       Risk Register, 30/60/90-Day Action Plan, Evidence Pack."
+
+  - Build user prompt with full analysis data serialised as JSON
+
+  - Call generateText with max_tokens: 3000
+
+  - Parse into executiveSummary (first 2 paragraphs) and full memoMarkdown
+
+  - Emit memo_ready event
+
+  - Return { executiveSummary, memoMarkdown }
+
+OUTPUT:    Memo markdown ≥800 words, contains at least 3 inline citations,
+           covers all detected conflicts.
+
+================================================================================
+PHASE 5 — BACKEND: ORCHESTRATION & API ROUTES
+================================================================================
+
+[T019]
+TITLE:     LangGraph orchestration pipeline
+DEPENDS:   T013, T014, T015, T016, T017, T018
+PRIORITY:  P0
+EST:       1.5 hours
+TASKS:
+  - Install: npm install @langchain/langgraph
+  - Create apps/api/src/orchestration/pipeline.ts
+
+  - Define graph state interface:
+      interface PipelineState {
+        brief: string
+        twin: ExpansionTwin | null
+        twinConfirmed: boolean
+        obligations: Obligation[]
+        conflicts: Conflict[]
+        scenarios: Scenario[]
+        actions: Action[]
+        memo: { executiveSummary: string, memoMarkdown: string } | null
+        stream: SSEStream
+        error: string | null
+      }
+
+  - Define graph nodes (each node calls the corresponding agent):
+      'intake'    → agent1-intake.extractExpansionTwin
+      'scout'     → agent2-scout.scoutJurisdictions
+      'conflict'  → agent3-conflicts.detectConflicts
+      'scenario'  → agent4-scenarios.simulateScenarios
+      'plan'      → agent5-planner.planResolution (if P1 built)
+      'memo'      → agent6-memo.generateMemo (if P1 built)
+
+  - Define edges:
+      START → intake
+      intake → HUMAN_CHECKPOINT  (await twin confirmation from client)
+      HUMAN_CHECKPOINT → scout
+      scout → conflict
+      conflict → scenario
+      scenario → plan (if P1)
+      plan → memo (if P1)
+      memo → END
+
+  - Human checkpoint implementation:
+      After intake, store twin in a pendingTwins Map keyed by sessionId
+      Return twin to client for review
+      Client calls PATCH /api/sessions/:id/twin with edited twin
+      Pipeline resumes from scout
+
+  - Alternatively (simpler for hackathon):
+      Skip LangGraph graph structure, run agents sequentially in a function
+      runPipeline(brief, stream): Promise<AnalysisResult>
+      This is acceptable for the demo — judges see the agent stream, not the graph
+
+  HACKATHON SHORTCUT: If time is tight, skip LangGraph and use sequential
+  async function with try/catch per agent step. The SSE stream will still
+  show agents running. LangGraph adds robustness but not demo value.
+
+OUTPUT:    runPipeline('Swedish HR SaaS brief...', stream) runs all agents,
+           emits events, returns complete AnalysisResult
+
+────────────────────────────────────────────────────────────────────────────────
+
+[T020]
+TITLE:     API routes
+DEPENDS:   T019, T006
+PRIORITY:  P0
+EST:       1 hour
+TASKS:
+  - Create apps/api/src/routes/analysis.ts
+
+  POST /api/analysis/start
+    Body: { brief: string }
+    Response: { sessionId: string }
+    Action: Creates session, starts pipeline asynchronously, returns immediately
+
+  GET /api/analysis/:sessionId/stream
+    Response: SSE stream (text/event-stream)
+    Action: Opens SSE connection, attaches stream to running pipeline
+    Emits all AgentEvents until [DONE]
+
+  GET /api/analysis/:sessionId/twin
+    Response: { twin: ExpansionTwin, confirmed: boolean }
+    Action: Returns extracted twin for partner review
+
+  PATCH /api/analysis/:sessionId/twin
+    Body: { twin: ExpansionTwin }
+    Response: { ok: true }
+    Action: Updates twin, confirms it, signals pipeline to continue from scout
+
+  GET /api/analysis/:sessionId/result
+    Response: AnalysisResult
+    Action: Returns complete result once pipeline is done
+    Returns 202 Accepted if still running
+
+  GET /api/analysis/:sessionId/memo
+    Response: { markdown: string, executiveSummary: string }
+    Action: Returns memo text for display
+
+  - Session management:
+      Store sessions in a Map<string, Session> (in-memory for hackathon)
+      Session: { id, status, twin, result, stream, createdAt }
+      Clean up sessions older than 2 hours
+
+OUTPUT:    All endpoints return correct status codes.
+           POST /start followed by GET /stream emits events.
+
+================================================================================
+PHASE 6 — FRONTEND: CORE LAYOUT
+================================================================================
+
+[T021]
+TITLE:     Next.js app shell and design system
+DEPENDS:   T001
+PRIORITY:  P0
+EST:       1 hour
+TASKS:
+  - Configure tailwind.config.ts with custom colours:
+      colors: {
+        ink: '#0A0A0A',
+        paper: '#F5F2EC',
+        rule: '#C8C4BB',
+        surface: '#E8E4DC',
+        'risk-critical': '#C0392B',
+        'risk-high': '#E67E22',
+        'risk-medium': '#8B8B00',
+        'risk-low': '#27AE60',
+      }
+      fontFamily: {
+        serif: ['Libre Baskerville', 'Georgia', 'serif'],
+        mono: ['DM Mono', 'Courier New', 'monospace'],
+      }
+
+  - Add Google Fonts to apps/web/app/layout.tsx:
+      Libre Baskerville (400, 700, italic)
+      DM Mono (300, 400, 500)
+
+  - Create apps/web/app/layout.tsx:
+      <html>
+        <body className="bg-paper text-ink font-mono overflow-hidden h-screen">
+          <Header />
+          {children}
+          <Footer />
+        </body>
+      </html>
+
+  - Create apps/web/components/Header.tsx:
+      Fixed top bar, 48px height, border-bottom border-ink
+      Left: "JurisdictIQ" in font-serif + italic span "/ legal intelligence"
+      Right: matter number, client badge, jurisdiction count
+      Background: bg-paper
+
+  - Create apps/web/components/Footer.tsx:
+      Fixed bottom bar, 28px height, bg-ink text-paper
+      Left: status dots (System, EUR-Lex, OpenSanctions, GLEIF) with pulse animation
+      Right: version string
+      font-mono text-[9px] tracking-widest uppercase
+
+  - Global CSS (app/globals.css):
+      Add @keyframes pulse for status dots
+      Add @keyframes fadeIn for stream lines
+      Remove default body margin/padding
+
+OUTPUT:    App renders header + footer, body is scrollable between them
+
+────────────────────────────────────────────────────────────────────────────────
+
+[T022]
+TITLE:     World map component
+DEPENDS:   T021
+PRIORITY:  P0
+EST:       2.5 hours
+TASKS:
+  - Create apps/web/components/Map/WorldMap.tsx
+  - Use SVG-based map (simplified country paths — see existing prototype in
+    the design prototype, or use a GeoJSON-to-SVG library)
+
+  OPTION A (faster): Use the SVG paths from the prototype already built.
+    Copy country <path> elements from the design prototype.
+    This is sufficient for demo. Covers: US, CA, MX, BR, AR,
+    GB, DE, FR, ES, IT, NL, SE, NO, PL, CH, DK, FI, AT, BE,
+    SG, JP, CN, IN, VN, KR, ID, AE, IL, TR, RU, ZA, NG, EG, AU, NZ
+
+  OPTION B (richer, 1hr extra): Use topojson + d3-geo
+    npm install d3-geo topojson-client @types/d3-geo
+    Fetch world-110m.json from https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json
+    Project with geoNaturalEarth1, render as SVG paths
+
+  - Props:
+      presenceData: Record<string, { employees: number, entityType: EntityType }>
+      onCountryClick: (isoCode: string, countryName: string) => void
+      activeCountry: string | null
+      panelOpen: boolean
+
+  - Country styling:
+      Default: fill='#F0EDE6' stroke='#0A0A0A' stroke-width='0.3'
+      Has presence: fill='#E8E4DC' stroke-width='0.5'
+      Hover: fill='#E0DDD6' cursor-pointer
+      Active (clicked): fill='#0A0A0A' (inverted)
+
+  - Employee count badges:
+      For each country with employees > 0:
+        Render a circle at country centroid (hardcoded centroid map for 10 key countries)
+        Circle: fill='#0A0A0A' r=10
+        Text: fill='#F5F2EC' font-size=9 font-family=DM Mono text-anchor=middle
+      Centroid map:
+        SE: [459, 83], DE: [443, 125], SG: [702, 264]
+        GB: [408, 115], US: [140, 185], VN: [718, 212]
+        FR: [420, 140], NL: [430, 112], NO: [448, 62]
+
+  - Tooltip:
+      Fixed position div, follows mousemove
+      Shows country name + employee count + entity type
+      Disappears on mouseleave
+      Implemented with useState for position + visibility
+
+  - Panel behaviour:
+      When panelOpen: apply css transition right-[340px] to map wrapper
+      Smooth slide using transition-all duration-350
+
+OUTPUT:    Map renders, country hover works, badge renders for SE/DE/SG/GB,
+           clicking a country calls onCountryClick
+
+────────────────────────────────────────────────────────────────────────────────
+
+[T023]
+TITLE:     Jurisdiction panel component
+DEPENDS:   T022
+PRIORITY:  P0
+EST:       1.5 hours
+TASKS:
+  - Create apps/web/components/Panel/JurisdictionPanel.tsx
+  - Props:
+      country: { iso: string, name: string, region: string } | null
+      presence: { employees: number, entityType: EntityType } | null
+      onClose: () => void
+      onRunAnalysis: (params: AnalysisParams) => void
+
+  - Panel structure (340px fixed right panel):
+
+    HEADER section:
+      Country name in font-serif text-xl bold
+      ISO + region in mono text-[9px] uppercase tracking-widest text-gray-500
+      Close button: border border-rule text-[10px] mono
+
+    CURRENT PRESENCE section:
+      2-column stat grid: employees count + entity type
+      Each stat in a bordered box with large number + small label
+
+    COMPLIANCE FLAGS section:
+      List of active obligations for this country (loaded from rule packs)
+      Each: coloured severity dot + description + category tag
+      Dots: bg-risk-critical / bg-risk-high / bg-risk-medium / bg-risk-low
+
+    EXPANSION FORM section:
+      Target headcount: custom number control (− / value / + buttons)
+      Work arrangement: 3-option toggle (Remote / Hybrid / On-site)
+      Entity structure: <select> with 5 options
+      Planned start: <input type="month">
+      Data processed: 3-option toggle (Personal / HR only / None)
+
+    ACTION BUTTON:
+      "Run conflict analysis →" full-width button
+      bg-ink text-paper font-mono text-[10px] uppercase tracking-widest
+      Calls onRunAnalysis with form values
+
+  - Slide animation:
+      transform translateX(100%) when closed
+      translateX(0) when open
+      transition: transform 350ms cubic-bezier(0.4, 0, 0.2, 1)
+
+OUTPUT:    Panel slides in/out, form values are captured on button click
+
+────────────────────────────────────────────────────────────────────────────────
+
+[T024]
+TITLE:     Agent stream component
+DEPENDS:   T006, T023
+PRIORITY:  P0
+EST:       1 hour
+TASKS:
+  - Create apps/web/components/Panel/AgentStream.tsx
+  - Props:
+      events: AgentEvent[]
+      isRunning: boolean
+      isComplete: boolean
+
+  - Renders inside the jurisdiction panel below the action button
+  - Each event renders as a div with:
+      fadeIn animation (opacity 0 → 1 over 300ms)
+      Sequential delay: index * 80ms animation-delay
+
+  - Event type styling:
+      agent_start / agent_complete: text-ink font-medium (dark, prominent)
+      api_call: text-gray-500 (muted — "calling EUR-Lex...")
+      api_result.ok: text-risk-low (green — "✓ Retrieved GDPR Art. 28")
+      conflict_detected: text-risk-critical (red — "⚠ CONFLICT: ...")
+      scenario_scored: text-gray-700
+      memo_ready: text-ink font-medium
+      error: text-risk-critical
+
+  - Each line: 10px mono, padding-y 4px, border-bottom border-dashed border-rule
+
+  - Auto-scroll to bottom as new events arrive:
+      useEffect → ref.current.scrollTop = ref.current.scrollHeight
+
+  - Loading indicator:
+      When isRunning and no events yet: show 3 animated dots
+
+OUTPUT:    Stream renders events in order with correct colours and animations
+
+================================================================================
+PHASE 7 — FRONTEND: RESULTS VIEWS
+================================================================================
+
+[T025]
+TITLE:     Conflict map view
+DEPENDS:   T024, T003
+PRIORITY:  P1
+EST:       1.5 hours
+TASKS:
+  - Create apps/web/components/Results/ConflictMap.tsx
+  - Props: { conflicts: Conflict[], obligations: Obligation[] }
+
+  - Layout: full-page view (replace map when results are ready, or tab)
+
+  - Conflict list view (primary layout for demo):
+      Each conflict as a card with:
+        Severity badge (colour-coded pill)
+        Title: "jurisdictionA ↔ jurisdictionB — category"
+        Type label: CONFLICT / TENSION / DEPENDENCY / TRIGGER RISK
+        Explanation text (collapsed to 2 lines, expand on click)
+        Mitigation options as numbered list with operationalImpact badge
+        "Blocks expansion" banner if blocksExpansion: true
+
+  - Summary bar at top:
+      Critical: N  High: N  Medium: N  Low: N
+      With coloured squares before each count
+
+  - Sort: critical first
+
+OUTPUT:    All conflicts from analysis render with correct severity colours
+
+────────────────────────────────────────────────────────────────────────────────
+
+[T026]
+TITLE:     Scenario comparison table
+DEPENDS:   T024, T003
+PRIORITY:  P1
+EST:       1 hour
+TASKS:
+  - Create apps/web/components/Results/ScenarioTable.tsx
+  - Props: { scenarios: Scenario[] }
+
+  - 5-column table:
+      Columns: Dimension | EOR | Subsidiary | Contractor-First | Distributor
+      Rows: Legal Risk | Compliance Burden | Time to Launch | Complexity | Total Score
+      Recommended column has border border-ink and "✓ Recommended" label
+
+  - Score cells: display number, colour-coded:
+      0–33: text-risk-low
+      34–66: text-risk-medium
+      67–100: text-risk-critical
+
+  - Time to launch: show in days not score
+
+  - Rationale: below table, expandable card per scenario
+
+  - Header: "Scenario comparison" in font-serif
+
+OUTPUT:    4-column table renders with correct scores and recommended highlight
+
+────────────────────────────────────────────────────────────────────────────────
+
+[T027]
+TITLE:     Action plan timeline view
+DEPENDS:   T024, T003
+PRIORITY:  P1
+EST:       1 hour
+TASKS:
+  - Create apps/web/components/Results/ActionPlan.tsx
+  - Props: { actions: Action[] }
+
+  - 3 sections: 0–30 Days / 31–60 Days / 61–90 Days
+  - Section header: bold, with action count badge
+
+  - Each action card:
+      Title (bold)
+      Owner badge: partner (dark) / associate (mid) / local-counsel (light) / client (outline)
+      Estimated days
+      Blocking indicator: red "⚑ Blocking" tag if blocking: true
+      Description (2 lines, expandable)
+      Obligation reference
+
+  - Dependency arrows: if action dependsOn others within same view,
+    show simple dashed connector (or just list "Requires: [title]" as text)
+
+OUTPUT:    Actions grouped by horizon, blocking actions visually distinct
+
+────────────────────────────────────────────────────────────────────────────────
+
+[T028]
+TITLE:     Memo export view
+DEPENDS:   T018
+PRIORITY:  P1
+EST:       45 min
+TASKS:
+  - Create apps/web/components/Results/MemoExport.tsx
+  - Props: { memo: { executiveSummary: string, memoMarkdown: string } }
+
+  - Executive summary card at top (always visible, styled as pull quote)
+
+  - Full memo rendered as markdown:
+      Install: npm install react-markdown
+      Apply font-serif prose styling to rendered output
+      Citations rendered in monospace
+
+  - Export button:
+      "Export as Markdown" → download .md file
+      Use Blob + URL.createObjectURL
+
+  - Legora export button (P2):
+      "Export to Legora" → show modal with JSON payload preview
+      (Legora doesn't have a real API to call, show as conceptual)
+
+OUTPUT:    Memo renders as formatted markdown, download works
+
+================================================================================
+PHASE 8 — FRONTEND: MAIN PAGE ORCHESTRATION
+================================================================================
+
+[T029]
+TITLE:     Main page state machine and flow
+DEPENDS:   T022, T023, T024, T025, T026, T027, T028, T020
+PRIORITY:  P0
+EST:       2 hours
+TASKS:
+  - Create apps/web/app/page.tsx as the main orchestrator
+
+  - State:
+      presenceData: Record<string, PresenceData>  // hardcoded initial data
+      activeCountry: { iso, name, region } | null
+      panelOpen: boolean
+      sessionId: string | null
+      agentEvents: AgentEvent[]
+      isRunning: boolean
+      isComplete: boolean
+      result: AnalysisResult | null
+      currentView: 'map' | 'conflicts' | 'scenarios' | 'plan' | 'memo'
+
+  - Initial presence data (hardcoded for demo):
+      SE: { employees: 2, entityType: 'hq' }
+      DE: { employees: 3, entityType: 'eor' }
+      SG: { employees: 1, entityType: 'contractor' }
+      GB: { employees: 2, entityType: 'eor' }
+
+  - Flow:
+      1. Map renders with presence badges
+      2. User clicks country → panel opens
+      3. User fills form, clicks "Run conflict analysis"
+      4. POST /api/analysis/start with generated brief string
+      5. Open SSE stream → append events to agentEvents
+      6. After twin extracted: GET /api/analysis/:id/twin → show twin for review
+      7. After confirmation: PATCH /api/analysis/:id/twin
+      8. On [DONE]: GET /api/analysis/:id/result → set result
+      9. Show results navigation tabs: Conflicts | Scenarios | Plan | Memo
+
+  - Brief construction from form values:
+      function buildBrief(country: string, params: AnalysisParams): string {
+        return `${companyName} is a ${industry} company headquartered in Sweden
+          with ${globalHeadcount} employees. They are expanding to ${country}
+          and plan to hire ${params.targetHeadcount} employees on a ${params.arrangement}
+          basis using ${params.entityStructure} structure. They process ${params.dataType}
+          data. Target launch: ${params.startDate}. Current DE employees: 3.`
+      }
+
+  - Results navigation:
+      Tab bar below header when result is available
+      Tabs: Overview | Conflicts (N) | Scenarios | Action Plan | Memo
+      Active tab renders corresponding Results component
+
+  - Twin review modal:
+      After intake, show a modal with editable twin fields
+      "Confirm & run analysis" button calls PATCH and continues
+
+OUTPUT:    Complete end-to-end flow works:
+           Click Germany → fill form → run analysis → see agent stream →
+           review twin → see conflicts → see scenarios → see memo
+
+================================================================================
+PHASE 9 — INTEGRATION & POLISH
+================================================================================
+
+[T030]
+TITLE:     End-to-end integration test
+DEPENDS:   T029
+PRIORITY:  P0
+EST:       1 hour
+TASKS:
+  - Run the demo scenario manually end-to-end:
+      Input: "Swedish HR SaaS, 50 employees, Germany expansion, 3 hires, HR data"
+      Expected: CONF-001 or CONF-003 detected, scenario table shows 4 options
+
+  - Fix any broken API connections (CORS, env vars, missing awaits)
+
+  - Verify SSE stream shows at minimum:
+      [Agent 1] Mandate parsed — target: Germany, headcount: 5
+      [Agent 2] Querying EUR-Lex SPARQL endpoint...
+      [Agent 2] Retrieved: [something]
+      [Agent 2] Querying OpenSanctions /match endpoint...
+      [Agent 3] Cross-jurisdiction conflict analysis initiated...
+      [Agent 3] ⚠ HIGH or CRITICAL: [conflict name]
+      [Agent 4] Scenario simulation complete
+      Memo ready
+
+  - Confirm all 5 real API calls fire (EUR-Lex, OpenSanctions, GLEIF, VIES, or CH)
+
+  - Measure total time from button click to [DONE]:
+      Target: < 30 seconds
+      If over 30s: parallelise more API calls in Agent 2
+
+OUTPUT:    Demo runs cleanly in under 30 seconds
+
+────────────────────────────────────────────────────────────────────────────────
+
+[T031]
+TITLE:     Demo data and fallback hardening
+DEPENDS:   T030
+PRIORITY:  P0
+EST:       45 min
+TASKS:
+  - Seed the app with pre-built demo session:
+      Create /api/analysis/demo endpoint that returns pre-run AnalysisResult
+      This is the fallback if live APIs fail during judging
+
+  - Cache EUR-Lex responses locally in apps/api/src/cache/eurlex/
+      Pre-cache GDPR, AI Act responses as JSON files
+      Load from file if SPARQL fails
+
+  - Add visible API status indicators in footer:
+      On startup: ping each API, set status (connected / degraded / offline)
+      Green dot = live, amber = cached, red = offline
+
+  - Add "Using cached data" label to any obligation that falls back to rule pack
+
+  - Add error boundary in frontend: if analysis fails, show error state with
+    "view pre-run demo" button
+
+OUTPUT:    Demo works even if EUR-Lex is down.
+           Judges see API status in footer.
+
+────────────────────────────────────────────────────────────────────────────────
+
+[T032]
+TITLE:     Visual polish and demo readiness
+DEPENDS:   T031
+PRIORITY:  P1
+EST:       1 hour
+TASKS:
+  - Review all font rendering: serif headings, mono data fields
+  - Ensure risk colours are consistent across all components
+  - Add loading skeleton for result panels (prevent layout shift)
+  - Smooth scroll to agent stream when it starts
+  - Ensure panel close animation is smooth
+  - Add window title: "JurisdictIQ — Legal Intelligence Platform"
+  - Add favicon (simple square with "J" in monospace)
+  - Test at 1280×800 and 1920×1080 — ensure no overflow or clipping
+  - Remove all console.log statements from production paths
+  - Ensure TypeScript compiles with 0 errors: npx tsc --noEmit
+
+OUTPUT:    App looks professional at presentation resolution.
+           No visible TypeScript or console errors.
+
+================================================================================
+PHASE 10 — STRETCH GOALS (P2)
+================================================================================
+
+[T033]  Twin review modal (editable fields)
+DEPENDS: T029 | EST: 1 hour
+Full inline-editable expansion twin with field-by-field edit controls.
+Currently: simple confirm/cancel. This adds: click any field to edit,
+validate on change, re-run affected obligations on save.
+
+[T034]  Trigger timeline view
+DEPENDS: T027 | EST: 1.5 hours
+A horizontal timeline showing: obligations active now, obligations that
+fire at 5 employees, at first invoice, at 12 months, etc.
+Plotted as a Gantt-style chart with obligation cards on hover.
+
+[T035]  Multi-country mandate (batch analysis)
+DEPENDS: T029 | EST: 1.5 hours
+Allow user to select multiple countries simultaneously from the map
+(shift+click or a "batch mode" toggle). Run analysis for all at once.
+Currently: one country per analysis run.
+
+[T036]  Legora export adapter
+DEPENDS: T028 | EST: 45 min
+Generate a structured JSON payload mimicking a Legora matter file format:
+{ matterTitle, jurisdiction, obligations, conflicts, documents: [memo] }
+Download as .json with "Legora Matter Export" label.
+Show as strategic positioning in the demo.
+
+[T037]  PDF memo generation
+DEPENDS: T028 | EST: 1 hour
+Convert memoMarkdown to PDF using @react-pdf/renderer or puppeteer.
+Download button generates a formatted PDF with firm name header.
+Higher credibility than plain markdown export.
+
+================================================================================
+APPENDIX A — ENVIRONMENT VARIABLES REFERENCE
+================================================================================
+
+ANTHROPIC_API_KEY
+  Required: Yes
+  Get from: console.anthropic.com
+  Used by: All Claude calls (agents 1, 4, 5, 6)
+
+OPENSANCTIONS_API_KEY
+  Required: Recommended (graceful degradation if missing)
+  Get from: opensanctions.org/api — free tier available
+  Used by: Agent 2 entity screening
+
+COMPANIES_HOUSE_API_KEY
+  Required: No (only needed if GB is target jurisdiction)
+  Get from: developer.company-information.service.gov.uk
+  Used by: Agent 2 UK entity lookup
+
+NEXT_PUBLIC_API_URL
+  Required: Yes
+  Default: http://localhost:3001
+  Used by: Frontend SSE connection and all API calls
+
+================================================================================
+APPENDIX B — KEY CELEX NUMBERS FOR EUR-LEX
+================================================================================
+
+32016R0679   → GDPR (General Data Protection Regulation)
+32024R1689   → EU AI Act
+32022L2464   → CSRD (Corporate Sustainability Reporting Directive)
+32021R0821   → DAC7 (Digital Platform Reporting Directive)
+32006L0112   → VAT Directive
+32009L0049   → Cross-Border Mergers Directive
+31977L0187   → Acquired Rights Directive (TUPE equivalent)
+
+================================================================================
+APPENDIX C — COUNTRY CENTROID MAP (SVG coordinates, viewBox 0 0 1000 500)
+================================================================================
+
+SE (Sweden):     [459,  83]
+DE (Germany):    [443, 125]
+GB (UK):         [408, 115]
+SG (Singapore):  [702, 264]
+VN (Vietnam):    [718, 212]
+FR (France):     [420, 140]
+NL (Netherlands):[430, 112]
+US (USA):        [140, 185]
+NO (Norway):     [448,  62]
+DK (Denmark):    [445,  93]
+FI (Finland):    [472,  70]
+PL (Poland):     [470, 112]
+CH (Switzerland):[440, 145]
+IN (India):      [655, 210]
+JP (Japan):      [785, 148]
+AU (Australia):  [800, 370]
+ZA (South Africa):[505,385]
+AE (UAE):        [593, 200]
+BR (Brazil):     [248, 315]
+
+================================================================================
+APPENDIX D — BUILD ORDER CHEATSHEET (print this)
+================================================================================
+
+HOUR 0–1:   T001 T002 T003 (setup)
+HOUR 1–2:   T004 T005 T006 (server + infra)
+HOUR 2–4:   T007 T008 T009 T010 (integrations)
+HOUR 4–7:   T012 T013 T014 T015 (rule packs + agents 1–3)
+HOUR 7–9:   T016 T019 T020 (agents 4 + orchestration + routes)
+HOUR 9–11:  T021 T022 T023 (frontend: map + panel)
+HOUR 11–13: T024 T029 (stream + page orchestration)
+HOUR 13–15: T030 T031 (integration + hardening)
+HOUR 15–16: T032 (polish)
+--- P0 COMPLETE --- demo is ready ---
+HOUR 16–18: T017 T018 (agents 5–6: planner + memo)
+HOUR 18–20: T025 T026 T027 T028 (result views)
+HOUR 20–22: T032 polish pass
+--- P1 COMPLETE --- full demo ready ---
+HOUR 22–28: T033 T034 T035 T036 T037 (stretch)
+
+================================================================================
+END OF DOCUMENT
+JurisdictIQ Technical Task Tree v1.0
+================================================================================
