@@ -1,16 +1,28 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { TopAppBar } from "@/components/TopAppBar";
+import { SideNav } from "@/components/SideNav";
+import { StatusFooter } from "@/components/StatusFooter";
+import { SummaryBar } from "@/components/SummaryBar";
+import { ConflictCard } from "@/components/ConflictCard";
+import { conflicts } from "@/data/conflicts";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+const Index = () => {
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
+    <div className="bg-surface text-on-surface min-h-screen flex flex-col overflow-x-hidden">
+      <TopAppBar />
+      <div className="flex flex-1 pt-[89px]">
+        <SideNav />
+        <main className="md:ml-80 flex-1 bg-surface min-h-screen px-6 md:px-16 py-12 md:py-16 pb-32">
+          <SummaryBar />
+          <section className="flex flex-col space-y-12 max-w-5xl">
+            {conflicts.map((c) => (
+              <ConflictCard key={c.id} conflict={c} />
+            ))}
+          </section>
+        </main>
+      </div>
+      <StatusFooter />
     </div>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
