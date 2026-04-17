@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { TopAppBar } from "@/components/TopAppBar";
+import { SideNav } from "@/components/SideNav";
 import { StatusFooter } from "@/components/StatusFooter";
 import { WorldMap } from "@/components/Map/WorldMap";
 import { JurisdictionPanel } from "@/components/Panel/JurisdictionPanel";
@@ -42,6 +43,7 @@ export default function Index() {
   const [twin, setTwin] = useState<ExpansionTwin | null>(null);
   const [showTwinReview, setShowTwinReview] = useState(false);
   const [presenceData] = useState(INITIAL_PRESENCE);
+  const [sideNavOpen, setSideNavOpen] = useState(false);
 
   const { events, isRunning, isComplete, error, start: startStream, reset: resetStream } = useAgentStream();
 
@@ -124,7 +126,8 @@ export default function Index() {
 
   return (
     <div className="bg-surface text-on-surface min-h-screen flex flex-col overflow-hidden">
-      <TopAppBar />
+      <TopAppBar onMenuToggle={() => setSideNavOpen((v) => !v)} menuOpen={sideNavOpen} />
+      <SideNav open={sideNavOpen} />
 
       {/* Results nav tabs */}
       {result && (

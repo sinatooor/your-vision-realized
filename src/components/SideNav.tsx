@@ -8,11 +8,19 @@ const items = [
   { icon: "account_tree", label: "Entity Structure" },
 ];
 
-export const SideNav = () => {
+interface SideNavProps {
+  open: boolean;
+}
+
+export const SideNav = ({ open }: SideNavProps) => {
   const [active, setActive] = useState("Regulatory Scope");
 
   return (
-    <aside className="fixed left-0 top-[89px] bottom-8 w-80 bg-surface-container flex flex-col py-12 px-6 z-40">
+    <aside
+      className={`fixed left-0 top-[89px] bottom-8 w-80 bg-surface-container flex flex-col py-12 px-6 z-40 transition-transform duration-300 ease-in-out shadow-xl ${
+        open ? "translate-x-0" : "-translate-x-full"
+      }`}
+    >
       <div className="mb-12 px-2">
         <h2 className="font-headline text-2xl text-primary mb-2">JurisdictIQ Analysis</h2>
         <p className="mono-label">Expansion Parameters</p>
