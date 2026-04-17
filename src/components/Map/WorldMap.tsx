@@ -24,7 +24,16 @@ const NUMERIC_TO_ALPHA2: Record<number, string> = {
   752: "SE", 756: "CH", 760: "SY", 764: "TH", 768: "TG", 780: "TT",
   788: "TN", 792: "TR", 800: "UG", 804: "UA", 784: "AE", 826: "GB",
   840: "US", 858: "UY", 860: "UZ", 862: "VE", 704: "VN", 887: "YE",
-  894: "ZM", 716: "ZW", 702: "SG", 716: "ZW", 50: "BD",
+  894: "ZM", 702: "SG",
+};
+
+const COUNTRY_NAMES: Record<string, string> = {
+  SE: "Sweden", DE: "Germany", GB: "United Kingdom", SG: "Singapore",
+  VN: "Vietnam", FR: "France", NL: "Netherlands", US: "United States",
+  NO: "Norway", DK: "Denmark", FI: "Finland", PL: "Poland",
+  CH: "Switzerland", IN: "India", JP: "Japan", AU: "Australia",
+  ZA: "South Africa", AE: "United Arab Emirates", BR: "Brazil",
+  CN: "China", CA: "Canada",
 };
 
 // Country centroids for marker placement [longitude, latitude]
@@ -187,24 +196,31 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
           const coords = CENTROIDS[iso];
           if (!coords) return null;
           const isActive = iso === activeCountry;
+          const isHq = data.entityType === "hq";
+          const circleFill = isActive ? "#FFFFFF" : isHq ? "#C9A227" : "#0A0A0A";
+          const circleStroke = isActive ? "#0A0A0A" : "none";
+          const textFill = isActive ? "#0A0A0A" : "#FFFFFF";
           return (
             <Marker key={iso} coordinates={coords}>
               <circle
                 r={11}
-                fill={isActive ? "#F5F2EC" : "#0A0A0A"}
-                stroke={isActive ? "#0A0A0A" : "none"}
-                strokeWidth={1}
-                style={{ pointerEvents: "none" }}
+                fill={circleFill}
+                stroke={circleStroke}
+                strokeWidth={1.5}
+                onClick={() => onCountryClick(iso, COUNTRY_NAMES[iso] ?? iso)}
+                style={{ pointerEvents: "auto", cursor: "pointer" }}
               />
               <text
                 textAnchor="middle"
                 y={4}
+                onClick={() => onCountryClick(iso, COUNTRY_NAMES[iso] ?? iso)}
                 style={{
                   fontFamily: "DM Mono, monospace",
                   fontSize: 9,
-                  fill: isActive ? "#0A0A0A" : "#F5F2EC",
-                  pointerEvents: "none",
+                  fill: textFill,
+                  pointerEvents: "auto",
                   userSelect: "none",
+                  cursor: "pointer",
                 }}
               >
                 {data.employees}
