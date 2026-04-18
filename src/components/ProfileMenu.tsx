@@ -47,12 +47,6 @@ export function ProfileMenu() {
   }, [open]);
 
   const presetIds = Object.keys(COMPANY_PRESETS) as PresetId[];
-  const initials = (company.name || "??")
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("");
 
   const handleSelectPreset = (id: PresetId) => {
     loadPreset(id);
