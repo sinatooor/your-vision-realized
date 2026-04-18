@@ -220,8 +220,23 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
           onMove={(pos) => setPosition(pos)}
         >
           <Geographies geography={GEO_URL}>
-            {({ geographies }) =>
-              geographies.map((geo) => {
+            {({ geographies }) => {
+              // Populate centroid cache once per dataset load (covers ALL countries on the map)
+              if (geographies.length && Object.keys(centroidCacheRef.current).length < geographies.length) {
+                const next: Record<string, [number, number]> = {};
+                for (const g of geographies) {
+                  const code = getAlpha2(g);
+                  if (!code) continue;
+                  const c = geoCentroid(g as Parameters<typeof geoCentroid>[0]);
+                  if (Number.isFinite(c[0]) && Number.isFinite(c[1])) {
+                    next[code] = [c[0], c[1]];
+                  }
+                }
+                centroidCacheRef.current = next;
+                // Defer state bump out of render
+                queueMicrotask(() => setCentroidsReady((n) => n + 1));
+              }
+              return geographies.map((geo) => {
                 const iso = getAlpha2(geo);
                 const name = getCountryName(geo);
                 return (
