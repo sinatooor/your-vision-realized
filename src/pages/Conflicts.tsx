@@ -77,6 +77,11 @@ export default function Conflicts() {
         <section id="conflicts-critical" className="scroll-mt-24 mb-12">
           <ConflictMap conflicts={result.conflicts} obligations={result.obligations} />
         </section>
+        {result.recentDevelopments && result.recentDevelopments.length > 0 && (
+          <section id="conflicts-news" className="scroll-mt-24 mb-12">
+            <RecentDevelopments developments={result.recentDevelopments} />
+          </section>
+        )}
         <section id="conflicts-mitigation" className="scroll-mt-24 mb-12">
           <h2 className="font-headline text-xl font-bold text-primary mb-3">Mitigation Strategies</h2>
           <p className="font-body text-sm text-on-surface-variant">

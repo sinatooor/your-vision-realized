@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { ActionPlan } from "@/components/Results/ActionPlan";
+import { RecentDevelopments } from "@/components/Results/RecentDevelopments";
 import { useAnalysis } from "@/contexts/AnalysisContext";
 
 export default function Plan() {
@@ -82,6 +83,11 @@ export default function Plan() {
         <section id="plan-timeline" className="scroll-mt-24 mb-12">
           <ActionPlan actions={result.actions} />
         </section>
+        {result.recentDevelopments && result.recentDevelopments.length > 0 && (
+          <section id="plan-news" className="scroll-mt-24 mb-12">
+            <RecentDevelopments developments={result.recentDevelopments} />
+          </section>
+        )}
         <section id="plan-owners" className="scroll-mt-24">
           <h2 className="font-headline text-xl font-bold text-primary mb-3">Owners</h2>
           <p className="font-body text-sm text-on-surface-variant">
