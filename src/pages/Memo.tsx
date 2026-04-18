@@ -36,7 +36,7 @@ export default function Memo() {
       style={{ height: "calc(100vh - 32px)" }}
     >
       <div className="px-12 py-8 max-w-5xl">
-        <div className="mb-8">
+        <section id="memo-summary" className="mb-8 scroll-mt-24">
           <h1 className="font-headline text-2xl font-bold text-primary">Advisory Memorandum</h1>
           <p className="font-body text-sm text-on-surface-variant mt-1">
             AI-drafted legal memo for partner review. Always verify findings with qualified local
@@ -48,13 +48,21 @@ export default function Memo() {
               AI-Generated — Requires Partner Review
             </span>
           </div>
-        </div>
-        <MemoExport
-          memo={{
-            executiveSummary: result.executiveSummary,
-            memoMarkdown: result.memoMarkdown,
-          }}
-        />
+        </section>
+        <section id="memo-body" className="scroll-mt-24 mb-12">
+          <MemoExport
+            memo={{
+              executiveSummary: result.executiveSummary,
+              memoMarkdown: result.memoMarkdown,
+            }}
+          />
+        </section>
+        <section id="memo-export" className="scroll-mt-24">
+          <h2 className="font-headline text-xl font-bold text-primary mb-3">Export</h2>
+          <p className="font-body text-sm text-on-surface-variant">
+            Use the export controls above to download the memo for partner review or client delivery.
+          </p>
+        </section>
       </div>
     </main>
   );

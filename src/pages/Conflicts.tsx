@@ -38,7 +38,7 @@ export default function Conflicts() {
       style={{ height: "calc(100vh - 32px)" }}
     >
       <div className="px-12 py-8 max-w-5xl">
-        <div className="mb-8">
+        <section id="conflicts-summary" className="mb-8 scroll-mt-24">
           <h1 className="font-headline text-2xl font-bold text-primary">
             Jurisdictional Conflicts
           </h1>
@@ -71,8 +71,22 @@ export default function Conflicts() {
               </div>
             )}
           </div>
-        </div>
-        <ConflictMap conflicts={result.conflicts} obligations={result.obligations} />
+        </section>
+        <section id="conflicts-critical" className="scroll-mt-24 mb-12">
+          <ConflictMap conflicts={result.conflicts} obligations={result.obligations} />
+        </section>
+        <section id="conflicts-mitigation" className="scroll-mt-24 mb-12">
+          <h2 className="font-headline text-xl font-bold text-primary mb-3">Mitigation Strategies</h2>
+          <p className="font-body text-sm text-on-surface-variant">
+            Recommended mitigation approaches per conflict are listed inline within each conflict card above. Prioritise critical and blocking items first.
+          </p>
+        </section>
+        <section id="conflicts-obligations" className="scroll-mt-24">
+          <h2 className="font-headline text-xl font-bold text-primary mb-3">Obligations</h2>
+          <p className="font-body text-sm text-on-surface-variant">
+            {result.obligations.length} obligations identified across the analysed jurisdictions.
+          </p>
+        </section>
       </div>
     </main>
   );
