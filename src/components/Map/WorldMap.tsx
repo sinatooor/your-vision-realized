@@ -107,28 +107,35 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
     coordinates: [0, 15],
     zoom: 1,
   });
+  // Mirror in a ref so the animation loop can read the latest value WITHOUT
+  // calling setState inside a setState updater (which causes infinite re-renders).
+  const positionRef = useRef(position);
+  positionRef.current = position;
   const animRef = useRef<number | null>(null);
 
   const animateTo = useCallback((target: { coordinates: [number, number]; zoom: number }) => {
     if (animRef.current) cancelAnimationFrame(animRef.current);
+    const from = positionRef.current;
     const start = performance.now();
-    setPosition((from) => {
-      const fromSnapshot = from;
-      const step = (now: number) => {
-        const t = Math.min(1, (now - start) / ZOOM_DURATION);
-        const k = easeInOutCubic(t);
-        setPosition({
-          coordinates: [
-            fromSnapshot.coordinates[0] + (target.coordinates[0] - fromSnapshot.coordinates[0]) * k,
-            fromSnapshot.coordinates[1] + (target.coordinates[1] - fromSnapshot.coordinates[1]) * k,
-          ],
-          zoom: fromSnapshot.zoom + (target.zoom - fromSnapshot.zoom) * k,
-        });
-        if (t < 1) animRef.current = requestAnimationFrame(step);
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / ZOOM_DURATION);
+      const k = easeInOutCubic(t);
+      const next = {
+        coordinates: [
+          from.coordinates[0] + (target.coordinates[0] - from.coordinates[0]) * k,
+          from.coordinates[1] + (target.coordinates[1] - from.coordinates[1]) * k,
+        ] as [number, number],
+        zoom: from.zoom + (target.zoom - from.zoom) * k,
       };
-      animRef.current = requestAnimationFrame(step);
-      return fromSnapshot;
-    });
+      positionRef.current = next;
+      setPosition(next);
+      if (t < 1) {
+        animRef.current = requestAnimationFrame(step);
+      } else {
+        animRef.current = null;
+      }
+    };
+    animRef.current = requestAnimationFrame(step);
   }, []);
 
   // Zoom-to-country on click; reset to world when cleared.
