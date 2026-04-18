@@ -18,45 +18,96 @@ export const SideNav = ({ open }: SideNavProps) => {
     setActive(items[0]?.id ?? "");
   }, [location.pathname, items]);
 
-  // Scroll-spy: observe sections and update active
+  // Scroll-spy: track active section by measuring positions in the scroll container
   useEffect(() => {
-    const elements = items
-      .map((i) => document.getElementById(i.id))
-      .filter((el): el is HTMLElement => !!el);
+    // Wait a tick for sections to mount
+    let raf = 0;
+    let scrollEl: HTMLElement | Window | null = null;
 
-    if (elements.length === 0) return;
+    const setup = () => {
+      const elements = items
+        .map((i) => document.getElementById(i.id))
+        .filter((el): el is HTMLElement => !!el);
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        // Pick the entry closest to top that is intersecting
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (visible[0]) setActive(visible[0].target.id);
-      },
-      {
-        // Account for the 89px top header
-        rootMargin: "-100px 0px -60% 0px",
-        threshold: [0, 0.25, 0.5, 1],
-      },
-    );
+      if (elements.length === 0) {
+        raf = requestAnimationFrame(setup);
+        return;
+      }
 
-    elements.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
+      // Find the actual scroll container (a <main> with overflow-auto, or window)
+      const firstParent = elements[0].closest("main") as HTMLElement | null;
+      scrollEl =
+        firstParent && firstParent.scrollHeight > firstParent.clientHeight + 1
+          ? firstParent
+          : window;
+
+      const compute = () => {
+        // Anchor line: 120px below top of scroll container (accounts for 89px header + padding)
+        const anchorY =
+          scrollEl === window
+            ? 120
+            : (scrollEl as HTMLElement).getBoundingClientRect().top + 120;
+
+        let currentId = elements[0].id;
+        for (const el of elements) {
+          const top = el.getBoundingClientRect().top;
+          if (top - anchorY <= 0) {
+            currentId = el.id;
+          } else {
+            break;
+          }
+        }
+        setActive((prev) => (prev === currentId ? prev : currentId));
+      };
+
+      let ticking = false;
+      const onScroll = () => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => {
+          compute();
+          ticking = false;
+        });
+      };
+
+      compute();
+      (scrollEl as any).addEventListener("scroll", onScroll, { passive: true });
+      window.addEventListener("resize", onScroll);
+
+      // Store cleanup on the ref-like closure
+      cleanup = () => {
+        (scrollEl as any).removeEventListener("scroll", onScroll);
+        window.removeEventListener("resize", onScroll);
+      };
+    };
+
+    let cleanup: (() => void) | null = null;
+    raf = requestAnimationFrame(setup);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      cleanup?.();
+    };
   }, [items, location.pathname]);
 
   const handleClick = (id: string) => {
     setActive(id);
     const el = document.getElementById(id);
-    if (el) {
-      // Find scrollable parent (main with overflow-auto)
-      const main = el.closest("main") || document.scrollingElement;
-      if (main && main !== document.scrollingElement) {
-        const top = el.getBoundingClientRect().top - main.getBoundingClientRect().top + main.scrollTop - 24;
-        (main as HTMLElement).scrollTo({ top, behavior: "smooth" });
-      } else {
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
+    if (!el) return;
+
+    const main = el.closest("main") as HTMLElement | null;
+    const usesMainScroll = main && main.scrollHeight > main.clientHeight + 1;
+
+    if (usesMainScroll && main) {
+      const top =
+        el.getBoundingClientRect().top -
+        main.getBoundingClientRect().top +
+        main.scrollTop -
+        100;
+      main.scrollTo({ top, behavior: "smooth" });
+    } else {
+      const top = el.getBoundingClientRect().top + window.scrollY - 100;
+      window.scrollTo({ top, behavior: "smooth" });
     }
   };
 
