@@ -21,6 +21,19 @@ export const TopAppBar = ({
   conflictCount,
   actionCount,
 }: TopAppBarProps) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const settingsActive = location.pathname === "/settings";
+
+  const handleSettingsClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (settingsActive) {
+      navigate(-1);
+    } else {
+      navigate("/settings");
+    }
+  };
+
   const navItems: NavItem[] = [
     { to: "/", label: "Overview", end: true },
     { to: "/conflicts", label: "Conflicts", count: conflictCount },
