@@ -1,5 +1,6 @@
 import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
 import { MaterialIcon } from "@/components/MaterialIcon";
+import { ProfileMenu } from "@/components/ProfileMenu";
 
 interface NavItem {
   to: string;
