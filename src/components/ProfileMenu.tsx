@@ -78,7 +78,7 @@ export function ProfileMenu() {
           open ? "text-primary" : "text-outline hover:text-primary"
         }`}
       >
-        <MaterialIcon name="account_circle" className="text-[20px]" />
+        
         <span className="hidden sm:inline max-w-[140px] truncate">
           {company.name || "Profile"}
         </span>
