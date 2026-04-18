@@ -271,8 +271,8 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
                     }}
                   />
                 );
-              })
-            }
+              });
+            }}
           </Geographies>
 
           {/* Employee presence markers — counter-scaled so size adapts to zoom */}
