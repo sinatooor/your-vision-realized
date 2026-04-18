@@ -215,7 +215,7 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
                     default: {
                       fill: getFill(iso),
                       stroke: getStroke(iso),
-                      strokeWidth: 0.4,
+                      strokeWidth: 0.4 * markerScale,
                       outline: "none",
                       cursor: iso ? "pointer" : "default",
                       transition: "fill 120ms ease",
@@ -223,14 +223,14 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
                     hover: {
                       fill: iso === activeCountry ? "#0A0A0A" : "#C8C5BE",
                       stroke: getStroke(iso),
-                      strokeWidth: 0.5,
+                      strokeWidth: 0.5 * markerScale,
                       outline: "none",
                       cursor: iso ? "pointer" : "default",
                     },
                     pressed: {
                       fill: "#0A0A0A",
                       stroke: "#0A0A0A",
-                      strokeWidth: 0.5,
+                      strokeWidth: 0.5 * markerScale,
                       outline: "none",
                     },
                   }}
