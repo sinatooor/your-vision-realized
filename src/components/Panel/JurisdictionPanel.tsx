@@ -260,9 +260,35 @@ export function JurisdictionPanel({ country, presence, onClose, onRunAnalysis, i
             <button
               onClick={handleSubmit}
               disabled={isRunning}
-              className="w-full bg-primary text-primary-foreground font-mono text-[10px] tracking-widest uppercase py-4 hover:bg-primary/90 transition-colors disabled:opacity-50"
+              className="w-full bg-primary text-primary-foreground font-mono text-[10px] tracking-widest uppercase py-4 hover:bg-primary/90 transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {isRunning ? "ANALYSIS RUNNING…" : "RUN CONFLICT ANALYSIS →"}
+              {isRunning ? (
+                <>
+                  <svg
+                    className="animate-spin h-3.5 w-3.5"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                    />
+                  </svg>
+                  ANALYSING…
+                </>
+              ) : (
+                "RUN CONFLICT ANALYSIS →"
+              )}
             </button>
           </div>
         </>

@@ -213,15 +213,7 @@ export default function Overview() {
             isRunning={isRunning}
           />
 
-          {panelOpen && (events.length > 0 || isRunning) && (
-            <div className="absolute right-0 bottom-0 w-[340px] border-l border-t border-outline-variant bg-surface z-50 max-h-64 overflow-y-auto">
-              <AgentStream
-                events={events}
-                isRunning={isRunning}
-                isComplete={isComplete}
-              />
-            </div>
-          )}
+          {/* AgentStream panel hidden — progress shown via button spinner */}
 
           {showTwinReview && twin && (
             <div className="fixed inset-0 bg-primary/70 flex items-center justify-center z-[100]">
