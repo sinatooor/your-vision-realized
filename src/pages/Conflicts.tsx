@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { ConflictMap } from "@/components/Results/ConflictMap";
 import { ObligationsTable } from "@/components/Results/ObligationsTable";
+import { RecentDevelopments } from "@/components/Results/RecentDevelopments";
 import { useAnalysis } from "@/contexts/AnalysisContext";
 
 export default function Conflicts() {
