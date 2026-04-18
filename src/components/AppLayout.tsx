@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom";
 import { TopAppBar } from "@/components/TopAppBar";
 import { SideNav } from "@/components/SideNav";
 import { StatusFooter } from "@/components/StatusFooter";
+import { OnboardingFlow } from "@/components/Onboarding/OnboardingFlow";
 import { useAnalysis } from "@/contexts/AnalysisContext";
 
 export function AppLayout() {
@@ -20,6 +21,7 @@ export function AppLayout() {
       <SideNav open={sideNavOpen} />
       <Outlet />
       <StatusFooter />
+      <OnboardingFlow />
     </div>
   );
 }
