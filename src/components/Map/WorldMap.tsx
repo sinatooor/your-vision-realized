@@ -99,6 +99,7 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
   const [dims, setDims] = useState({ width: 800, height: 500 });
   // Centroid cache: ISO → [lon, lat], populated from geo features as they render
   const centroidCacheRef = useRef<Record<string, [number, number]>>({});
+  const centroidsBuiltRef = useRef(false);
   // Bump on cache update so the activeCountry effect re-runs once the cache is ready
   const [centroidsReady, setCentroidsReady] = useState(0);
 
