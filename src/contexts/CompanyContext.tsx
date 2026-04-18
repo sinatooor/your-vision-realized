@@ -255,6 +255,7 @@ interface CompanyContextValue {
   loadPreset: (id: PresetId) => void;
   loadCustom: (id: string) => void;
   addCustomCompany: (name: string) => string;
+  removeCustomCompany: (id: string) => void;
 }
 
 const CompanyContext = createContext<CompanyContextValue | null>(null);
