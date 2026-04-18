@@ -3,14 +3,32 @@ import { useAgentStream, startAnalysis, fetchResult, fetchTwin, confirmTwin } fr
 import { AnalysisParams, AnalysisResult, EntityType, ExpansionTwin, PresenceData, AgentEvent } from "@/types";
 
 const INITIAL_PRESENCE: Record<string, PresenceData> = {
-  SE: { employees: 2, entityType: "hq" as EntityType },
-  DE: { employees: 3, entityType: "eor" as EntityType },
-  SG: { employees: 1, entityType: "contractor" as EntityType },
-  GB: { employees: 2, entityType: "eor" as EntityType },
+  SE: { employees: 185, entityType: "hq" as EntityType },
+  DE: { employees: 48, entityType: "eor" as EntityType },
+  SG: { employees: 12, entityType: "contractor" as EntityType },
+  GB: { employees: 34, entityType: "eor" as EntityType },
 };
 
 const COMPANY_NAME = "NordHR Technologies AB";
-const COMPANY_INDUSTRY = "HR SaaS";
+const GLOBAL_HEADCOUNT = Object.values(INITIAL_PRESENCE).reduce((sum, p) => sum + p.employees, 0);
+
+const INDUSTRY_LABELS: Record<string, string> = {
+  "hr-saas": "HR / HCM SaaS",
+  fintech: "Fintech / Payments",
+  biomedical: "Biomedical / Pharma",
+  manufacturing: "Manufacturing",
+  "e-commerce": "E-Commerce / Retail",
+  logistics: "Logistics / Supply Chain",
+  legaltech: "LegalTech",
+  other: "Technology",
+};
+
+const REVENUE_LABELS: Record<string, string> = {
+  "under-1m": "under €1 M",
+  "1m-10m": "€1 M – €10 M",
+  "10m-100m": "€10 M – €100 M",
+  "over-100m": "over €100 M",
+};
 
 function buildBrief(country: string, countryName: string, params: AnalysisParams): string {
   const dataDesc =
@@ -19,7 +37,13 @@ function buildBrief(country: string, countryName: string, params: AnalysisParams
       : params.dataType === "personal"
       ? "personal and customer data"
       : "no personal data";
-  return `${COMPANY_NAME} is a ${COMPANY_INDUSTRY} company headquartered in Sweden (SE) with approximately 50 employees globally. They are expanding to ${countryName} (${country}) and plan to hire ${params.targetHeadcount} employees on a ${params.arrangement} basis using ${params.entityStructure} structure. They process ${dataDesc}. Their data architecture is centralised in Sweden. Target launch: ${params.startDate || "Q2 2025"}. Current Germany employees: 3 (EOR). Current Singapore employees: 1 (contractor). Current UK employees: 2 (EOR). The company has AI features in their HR analytics product.`;
+  const currentPresence = Object.entries(INITIAL_PRESENCE)
+    .filter(([iso]) => iso !== "SE")
+    .map(([iso, p]) => `${iso}: ${p.employees} (${p.entityType})`)
+    .join(", ");
+  const industryLabel = INDUSTRY_LABELS[params.industry] ?? "Technology";
+  const aiNote = params.hasAiFeatures ? " Their product includes AI/ML features subject to AI Act obligations." : "";
+  return `${COMPANY_NAME} is a ${industryLabel} company headquartered in Sweden (SE) with approximately ${GLOBAL_HEADCOUNT} employees globally and annual revenue of ${REVENUE_LABELS[params.revenueEur] ?? "undisclosed"}. They are expanding to ${countryName} (${country}) and plan to hire ${params.targetHeadcount} employees on a ${params.arrangement} basis using ${params.entityStructure} structure. They process ${dataDesc}. Their data architecture is centralised in Sweden. Target launch: ${params.startDate || "Q2 2025"}. Current international presence — ${currentPresence}.${aiNote}`;
 }
 
 interface AnalysisContextValue {
@@ -34,12 +58,15 @@ interface AnalysisContextValue {
   isRunning: boolean;
   isComplete: boolean;
   error: string | null;
+  hasNavigatedToResults: boolean;
+  markNavigatedToResults: () => void;
   handleCountryClick: (iso: string, name: string) => void;
   handleClose: () => void;
   handleRunAnalysis: (params: AnalysisParams) => Promise<void>;
   confirmTwinAndContinue: () => Promise<void>;
   setShowTwinReview: (v: boolean) => void;
   resetAnalysis: () => void;
+  updateMemo: (patch: { memoMarkdown?: string; executiveSummary?: string }) => void;
 }
 
 const AnalysisContext = createContext<AnalysisContextValue | null>(null);
@@ -51,7 +78,10 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [twin, setTwin] = useState<ExpansionTwin | null>(null);
   const [showTwinReview, setShowTwinReview] = useState(false);
+  const [hasNavigatedToResults, setHasNavigatedToResults] = useState(false);
   const [presenceData] = useState(INITIAL_PRESENCE);
+
+  const markNavigatedToResults = useCallback(() => setHasNavigatedToResults(true), []);
 
   const { events, isRunning, isComplete, error, start: startStream, reset: resetStream } = useAgentStream();
 
@@ -72,6 +102,7 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
       setResult(null);
       setTwin(null);
       setShowTwinReview(false);
+      setHasNavigatedToResults(false);
       try {
         const brief = buildBrief(activeCountry.iso, activeCountry.name, params);
         const sid = await startAnalysis(brief);
@@ -121,6 +152,21 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
     setShowTwinReview(false);
   }, [sessionId, twin]);
 
+  const updateMemo = useCallback(
+    (patch: { memoMarkdown?: string; executiveSummary?: string }) => {
+      setResult((prev) =>
+        prev
+          ? {
+              ...prev,
+              memoMarkdown: patch.memoMarkdown ?? prev.memoMarkdown,
+              executiveSummary: patch.executiveSummary ?? prev.executiveSummary,
+            }
+          : prev,
+      );
+    },
+    [],
+  );
+
   const resetAnalysis = useCallback(() => {
     resetStream();
     setResult(null);
@@ -129,6 +175,7 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
     setSessionId(null);
     setActiveCountry(null);
     setPanelOpen(false);
+    setHasNavigatedToResults(false);
   }, [resetStream]);
 
   return (
@@ -145,12 +192,15 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
         isRunning,
         isComplete,
         error,
+        hasNavigatedToResults,
+        markNavigatedToResults,
         handleCountryClick,
         handleClose,
         handleRunAnalysis,
         confirmTwinAndContinue,
         setShowTwinReview,
         resetAnalysis,
+        updateMemo,
       }}
     >
       {children}

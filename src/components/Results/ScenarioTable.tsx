@@ -5,10 +5,18 @@ interface ScenarioTableProps {
   scenarios: Scenario[];
 }
 
+// Stoplight model — aligned with ConflictMap.
+// Lower score = lower risk / better outcome.
 function scoreColor(score: number): string {
-  if (score <= 33) return "text-low";
-  if (score <= 66) return "text-medium";
-  return "text-critical";
+  if (score <= 33) return "text-low";       // green
+  if (score <= 66) return "text-medium";    // yellow
+  return "text-critical";                    // red
+}
+
+function scoreDot(score: number): string {
+  if (score <= 33) return "bg-low";
+  if (score <= 66) return "bg-medium";
+  return "bg-critical";
 }
 
 export function ScenarioTable({ scenarios }: ScenarioTableProps) {
@@ -26,7 +34,35 @@ export function ScenarioTable({ scenarios }: ScenarioTableProps) {
 
   return (
     <div>
-      <h3 className="font-headline text-xl font-bold text-primary mb-6">Scenario Comparison</h3>
+      <div className="flex items-end justify-between mb-6 flex-wrap gap-4">
+        <h3 className="font-headline text-xl font-bold text-primary">Scenario Comparison</h3>
+        <div className="border border-outline-variant px-4 py-2">
+          <p className="font-mono text-[9px] tracking-widest uppercase text-outline mb-1.5">
+            Scoring Legend · Lower = Better
+          </p>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1.5">
+              <span className={`w-2.5 h-2.5 ${scoreDot(10)}`} />
+              <span className="font-mono text-[9px] tracking-widest uppercase text-outline">0&ndash;33 Low Risk</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className={`w-2.5 h-2.5 ${scoreDot(50)}`} />
+              <span className="font-mono text-[9px] tracking-widest uppercase text-outline">34&ndash;66 Moderate</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className={`w-2.5 h-2.5 ${scoreDot(80)}`} />
+              <span className="font-mono text-[9px] tracking-widest uppercase text-outline">67&ndash;100 High Risk</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p className="font-body text-xs text-on-surface-variant mb-6 max-w-2xl">
+        Each dimension is scored 0&ndash;100 by Agent 4 based on the statutes, conflicts, and
+        obligations identified for the target jurisdiction. The total score is the equally-weighted
+        sum across Legal Risk, Compliance Burden, and Operational Complexity. Time to Launch is
+        shown in calendar days and is informational only &mdash; it is not part of the total score.
+      </p>
 
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">

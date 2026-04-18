@@ -18,7 +18,7 @@ export function toAppError(error: unknown, fallbackMessage: string): AppError {
   }
 
   if (error instanceof Error) {
-    return new AppError(fallbackMessage, 502, "UPSTREAM_ERROR", {
+    return new AppError(`${fallbackMessage}: ${error.message}`, 502, "UPSTREAM_ERROR", {
       upstreamMessage: error.message,
     });
   }

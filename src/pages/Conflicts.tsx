@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { ConflictMap } from "@/components/Results/ConflictMap";
+import { ObligationsTable } from "@/components/Results/ObligationsTable";
 import { useAnalysis } from "@/contexts/AnalysisContext";
 
 export default function Conflicts() {
@@ -82,10 +83,12 @@ export default function Conflicts() {
           </p>
         </section>
         <section id="conflicts-obligations" className="scroll-mt-24">
-          <h2 className="font-headline text-xl font-bold text-primary mb-3">Obligations</h2>
-          <p className="font-body text-sm text-on-surface-variant">
-            {result.obligations.length} obligations identified across the analysed jurisdictions.
+          <h2 className="font-headline text-xl font-bold text-primary mb-2">Risk Register</h2>
+          <p className="font-body text-sm text-on-surface-variant mb-6">
+            {result.obligations.length} obligation{result.obligations.length === 1 ? "" : "s"} identified across the analysed jurisdictions.
+            Click a row to see the trigger, threshold, and statutory source.
           </p>
+          <ObligationsTable obligations={result.obligations} />
         </section>
       </div>
     </main>

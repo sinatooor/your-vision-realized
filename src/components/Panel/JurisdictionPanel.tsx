@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AnalysisParams, EntityType, PresenceData } from "@/types";
+import { AnalysisParams, EntityType, IndustryType, PresenceData } from "@/types";
 
 interface JurisdictionPanelProps {
   country: { iso: string; name: string } | null;
@@ -20,15 +20,36 @@ const ENTITY_LABELS: Record<EntityType, string> = {
   none: "None",
 };
 
+const INDUSTRY_OPTIONS: { value: IndustryType; label: string }[] = [
+  { value: "hr-saas", label: "HR / HCM SaaS" },
+  { value: "fintech", label: "Fintech / Payments" },
+  { value: "biomedical", label: "Biomedical / Pharma" },
+  { value: "manufacturing", label: "Manufacturing" },
+  { value: "e-commerce", label: "E-Commerce / Retail" },
+  { value: "logistics", label: "Logistics / Supply Chain" },
+  { value: "legaltech", label: "LegalTech" },
+  { value: "other", label: "Other" },
+];
+
+const REVENUE_OPTIONS: { value: AnalysisParams["revenueEur"]; label: string }[] = [
+  { value: "under-1m", label: "< €1 M" },
+  { value: "1m-10m", label: "€1 M – €10 M" },
+  { value: "10m-100m", label: "€10 M – €100 M" },
+  { value: "over-100m", label: "> €100 M" },
+];
+
 export function JurisdictionPanel({ country, presence, onClose, onRunAnalysis, isRunning }: JurisdictionPanelProps) {
   const [headcount, setHeadcount] = useState(3);
   const [arrangement, setArrangement] = useState<"remote" | "hybrid" | "on-site">("remote");
   const [entityStructure, setEntityStructure] = useState<EntityType>("eor");
   const [startDate, setStartDate] = useState("");
   const [dataType, setDataType] = useState<"personal" | "hr-only" | "none">("hr-only");
+  const [industry, setIndustry] = useState<IndustryType>("hr-saas");
+  const [revenueEur, setRevenueEur] = useState<AnalysisParams["revenueEur"]>("1m-10m");
+  const [hasAiFeatures, setHasAiFeatures] = useState(false);
 
   const handleSubmit = () => {
-    onRunAnalysis({ targetHeadcount: headcount, arrangement, entityStructure, startDate, dataType });
+    onRunAnalysis({ targetHeadcount: headcount, arrangement, entityStructure, startDate, dataType, industry, revenueEur, hasAiFeatures });
   };
 
   return (
@@ -167,6 +188,59 @@ export function JurisdictionPanel({ country, presence, onClose, onRunAnalysis, i
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Industry */}
+            <div className="mb-4">
+              <label className="font-mono text-[9px] tracking-widest uppercase text-outline block mb-2">
+                INDUSTRY
+              </label>
+              <select
+                value={industry}
+                onChange={(e) => setIndustry(e.target.value as IndustryType)}
+                className="w-full border border-outline-variant bg-surface font-mono text-[10px] tracking-widest uppercase text-primary py-2 px-3"
+              >
+                {INDUSTRY_OPTIONS.map(({ value, label }) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Revenue band */}
+            <div className="mb-4">
+              <label className="font-mono text-[9px] tracking-widest uppercase text-outline block mb-2">
+                ANNUAL REVENUE
+              </label>
+              <div className="grid grid-cols-2 gap-1">
+                {REVENUE_OPTIONS.map(({ value, label }) => (
+                  <button
+                    key={value}
+                    onClick={() => setRevenueEur(value)}
+                    className={`py-2 font-mono text-[9px] tracking-widest uppercase transition-colors border ${
+                      revenueEur === value
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "text-outline border-outline-variant hover:text-primary"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* AI features toggle */}
+            <div className="mb-4 flex items-center justify-between">
+              <label className="font-mono text-[9px] tracking-widest uppercase text-outline">
+                PRODUCT HAS AI FEATURES
+              </label>
+              <button
+                onClick={() => setHasAiFeatures((v) => !v)}
+                className={`w-10 h-5 rounded-full transition-colors relative ${hasAiFeatures ? "bg-primary" : "bg-outline-variant"}`}
+              >
+                <span
+                  className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${hasAiFeatures ? "translate-x-5" : "translate-x-0.5"}`}
+                />
+              </button>
             </div>
 
             {/* Start date */}

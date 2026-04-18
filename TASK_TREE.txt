@@ -1,0 +1,252 @@
+================================================================================
+ JURISDICTIQ — TASK TREE
+================================================================================
+ Generated: 2026-04-18
+ Scope:     Bug fixes + feature work derived from user feedback session
+ Legend:    [P0] critical  [P1] high  [P2] medium  [P3] nice-to-have
+            (F) frontend  (B) backend  (D) data/AI prompt
+================================================================================
+
+
+1. BUG FIXES
+───────────────────────────────────────────────────────────────────────────────
+│
+├── 1.1 [P0][F] Back-to-overview navigation broken
+│       Problem:  Overview.tsx:83-88 auto-redirects to /conflicts the moment
+│                 `result` is set in context. Returning to map bounces the
+│                 user straight back to /conflicts.
+│       Fix:      Gate the redirect behind a first-time-only flag OR trigger
+│                 only on the completion event, not on every render where
+│                 `result` is truthy.
+│       Files:    src/pages/Overview.tsx
+│                 src/contexts/AnalysisContext.tsx
+│       Accept:   User can open map, run analysis, land on /conflicts, then
+│                 navigate back to / and see the map with presence + conflicts
+│                 data retained.
+│
+├── 1.2 [P0][F][D] Executive Summary renders raw markdown + truncates
+│       Problem:  MemoExport.tsx wraps summary in a plain <p> — **bold** shows
+│                 as literal asterisks. Summary also cuts off mid-sentence.
+│       Fix:      (a) Render summary through ReactMarkdown (same pipeline as
+│                     the full memo body).
+│                 (b) Raise max_tokens / tighten prompt in agent6-memo so the
+│                     summary finishes its thought. Add a post-generation
+│                     sentence-boundary check.
+│       Files:    src/components/Results/MemoExport.tsx
+│                 apps/api/src/agents/agent6-memo.ts
+│       Accept:   Bold/italic render correctly; summary ends on a period.
+│
+├── 1.3 [P1][F] PDF export missing
+│       Problem:  Only markdown export exists on the memo page.
+│       Fix:      Add a second button "EXPORT AS PDF" that invokes
+│                 window.print() against a print-styled copy of the memo
+│                 (or use html2pdf/react-to-print). Hide chrome in print CSS.
+│       Files:    src/components/Results/MemoExport.tsx
+│                 src/index.css  (add @media print rules)
+│       Accept:   Clicking the button produces a clean, paginated PDF with
+│                 memo content only (no nav, no buttons).
+│
+└── 1.4 [P2][F] "Generate Brief" button in SideNav is dead
+        Problem:  SideNav.tsx:144 has no onClick handler.
+        Decision: Likely redundant once the memo chat exists. Options:
+                   (a) Remove it outright.
+                   (b) Repurpose as "Open Memo Chat" linking to /memo.
+        Recommend: (a) remove — chat interface supersedes this action.
+        Files:    src/components/SideNav.tsx
+
+
+2. UI CONSISTENCY
+───────────────────────────────────────────────────────────────────────────────
+│
+├── 2.1 [P1][F] Collapse conflicts to 3-color severity system
+│       Problem:  ConflictMap uses 4 colors (critical/high/medium/low) which
+│                 dilutes signal and isn't the stoplight model the user wants.
+│       Fix:      Map severity → {red: critical+high, yellow: medium,
+│                 green: low}. Update badge colors, dot indicators, and the
+│                 summary count bar to show 3 buckets.
+│       Files:    src/components/Results/ConflictMap.tsx
+│                 src/index.css  (confirm token usage)
+│                 Consider: keep 4-level data model, only collapse at render.
+│       Accept:   Summary shows 3 groups; badges use only red/yellow/green.
+│
+├── 2.2 [P1][F] Scenario scores: motivation + legend
+│       Problem:  ScenarioTable color gradient is unexplained. Users can't
+│                 tell which direction is good. Score origin is opaque.
+│       Fix:      (a) Add a "SCORING" legend above the table:
+│                     "Lower score = lower risk. Each dimension scored 0-100
+│                     based on legal exposure, compliance burden, etc."
+│                 (b) Align color semantics app-wide: green = good, red = bad.
+│                     Currently ScenarioTable.scoreColor() already does this
+│                     but it must match the 3-color stoplight from 2.1.
+│                 (c) Add tooltip/info icon next to "Total Score" explaining
+│                     the weighted formula.
+│       Files:    src/components/Results/ScenarioTable.tsx
+│                 src/pages/Scenarios.tsx  (rationale section)
+│       Accept:   A user who has never seen the page can look at it and
+│                 understand which scenario is recommended and why.
+│
+└── 2.3 [P2][F] Risk register format clarity
+        Problem:  Obligations listing on /conflicts is a single sentence with
+                  a count. No structured view of what each obligation is.
+        Fix:      Render obligations as a table: Jurisdiction | Category |
+                  Obligation | Severity | Deadline | Owner. Group by
+                  jurisdiction. Add severity badge using 2.1 color system.
+        Files:    src/pages/Conflicts.tsx
+                  src/components/Results/ObligationsTable.tsx  (new)
+
+
+3. MEMO COLLABORATION (CHAT INTERFACE)
+───────────────────────────────────────────────────────────────────────────────
+│
+├── 3.1 [P1][F] Split-panel memo chat layout
+│       Goal:     /memo becomes a two-pane view: chat on left, live memo
+│                 document on right. Lawyer types instructions; AI edits the
+│                 memo in place; the memo re-renders on each turn.
+│       Design:   Left pane  ~40% width — conversation history, input box,
+│                            file attach affordance.
+│                 Right pane ~60% width — current memo (existing MemoExport),
+│                            with inline comment affordances (3.2).
+│       Files:    src/pages/Memo.tsx  (restructure)
+│                 src/components/Memo/MemoChat.tsx  (new)
+│                 src/components/Memo/MemoDocument.tsx  (new, extracted)
+│                 src/contexts/AnalysisContext.tsx  (persist chat history)
+│       Depends:  3.3 (backend chat endpoint)
+│
+├── 3.2 [P2][F] Inline comments & AI-driven memo edits
+│       Goal:     Lawyer can select a paragraph in the memo, attach a comment,
+│                 send to AI. AI responds in chat + applies edit to that
+│                 paragraph. Comments visible as a margin/gutter.
+│       Files:    src/components/Memo/MemoDocument.tsx
+│                 src/components/Memo/CommentThread.tsx  (new)
+│
+├── 3.3 [P1][B] Memo chat backend endpoint
+│       Goal:     New endpoint POST /api/analysis/:sessionId/memo-chat
+│                 Body: { message, attachments?, memoSelection? }
+│                 Returns: { reply, updatedMemoMarkdown }
+│                 Use Claude with prompt caching on the memo + session context.
+│       Files:    apps/api/src/routes/analysis.ts
+│                 apps/api/src/agents/agent7-memo-chat.ts  (new)
+│                 apps/api/src/lib/claude.ts
+│
+├── 3.4 [P2][F][B] Supporting document upload
+│       Goal:     Lawyer can attach PDFs / docx to the chat. Files are parsed
+│                 (text extraction) and added as context for the AI turn.
+│                 Files listed as chips in chat history and in a "Supporting
+│                 Documents" sidebar on /memo.
+│       Files:    src/components/Memo/FileUpload.tsx  (new)
+│                 apps/api/src/routes/analysis.ts  (upload handler)
+│                 apps/api/src/lib/doc-extract.ts  (new — pdf/docx parsing)
+│       Notes:    Use multipart/form-data. Cap size. Store in Supabase Storage
+│                 or session-local disk.
+│
+├── 3.5 [P1][F] Dual sign-off section on memo
+│       Goal:     Two blocks at the bottom of the memo document:
+│                   - LAWYER SIGN-OFF    [digital signature capture]
+│                   - CLIENT SIGN-OFF    [empty placeholder for later]
+│                 Both render in exported PDF.
+│       Files:    src/components/Memo/SignOffBlock.tsx  (new)
+│                 src/components/Results/MemoExport.tsx
+│
+└── 3.6 [P1][F][B] Lawyer sign-off flow
+        Goal:     Button "Approve & Sign" opens modal. Lawyer enters name,
+                  draws signature (canvas) or types it, submits.
+                  Memo stamped with name + ISO timestamp + signature image.
+                  Status badge changes to "APPROVED — READY FOR CLIENT".
+        Files:    src/components/Memo/SignOffModal.tsx  (new)
+                  src/components/Memo/SignaturePad.tsx  (new — canvas-based)
+                  apps/api/src/routes/analysis.ts  (persist sign-off)
+        Depends:  3.5
+
+
+4. DATA & ANALYSIS DEPTH
+───────────────────────────────────────────────────────────────────────────────
+│
+├── 4.1 [P1][B][D] Pull EUR-Lex proposed/upcoming legislation
+│       Goal:     Current eurlex.ts fetches enacted law only. Extend to also
+│                 query COM (Commission proposals) + upcoming Directives that
+│                 have near-term effective dates. Include status (proposed,
+│                 adopted-not-yet-in-force, in-force) and estimated date.
+│       Files:    apps/api/src/integrations/eurlex.ts
+│                 apps/api/src/agents/agent2-scout.ts  (consume new fields)
+│                 apps/api/src/types/  (add `status` + `effectiveDate` to
+│                                        obligation type)
+│       Accept:   Scout output includes at least one proposed-law obligation
+│                 for Germany or Sweden when analyzing those jurisdictions.
+│
+├── 4.2 [P1][F] Surface proposed vs enacted in UI
+│       Goal:     Visual distinction for upcoming/proposed regulations across
+│                 Conflicts + Obligations views. Badge: "PROPOSED — effective
+│                 Q3 2026" or "IN-FORCE". Filter toggle to show/hide upcoming.
+│       Files:    src/components/Results/ConflictMap.tsx
+│                 src/components/Results/ObligationsTable.tsx
+│                 src/types/index.ts  (extend Obligation/Conflict)
+│       Depends:  4.1
+│
+├── 4.3 [P1][F][D] Industry + richer context in JurisdictionPanel
+│       Goal:     Current form only captures headcount/arrangement/entity/
+│                 data type/start date. Add:
+│                   - Industry (dropdown: manufacturing, biomedical, fintech,
+│                              HR SaaS, e-commerce, logistics, other)
+│                   - Revenue band (< 1M, 1-10M, 10-50M, 50M+)
+│                   - AI/automated decision-making flag (checkbox)
+│                   - Data residency constraints (free text)
+│                 All fed into buildBrief → agent prompts so law selection is
+│                 industry-aware (e.g. MDR for biomedical, DORA for fintech).
+│       Files:    src/components/Panel/JurisdictionPanel.tsx
+│                 src/types/index.ts  (AnalysisParams)
+│                 src/contexts/AnalysisContext.tsx  (buildBrief)
+│                 apps/api/src/agents/agent1-intake.ts  (extract new fields)
+│                 apps/api/src/agents/agent2-scout.ts  (industry-specific law)
+│       Accept:   Selecting "biomedical" for Germany surfaces MDR/IVDR;
+│                 "fintech" surfaces DORA, PSD2/3.
+│
+└── 4.4 [P2][F][D] Increase employee-count baseline
+        Goal:     buildBrief currently says "approximately 50 employees
+                  globally" — too small for the target persona. Raise to
+                  ~450 and make it an editable field in JurisdictionPanel
+                  (or in Settings as a default).
+        Files:    src/contexts/AnalysisContext.tsx:22
+                  src/components/Panel/JurisdictionPanel.tsx  (optional input)
+
+
+================================================================================
+ EXECUTION ORDER (SUGGESTED)
+================================================================================
+
+ Wave 1 — quick wins & blockers (1-2 days)
+   1.1  Back-to-overview navigation
+   1.2  Executive Summary rendering + truncation
+   1.4  Remove dead Generate Brief button
+   2.1  3-color conflict system
+   4.4  Employee count baseline
+
+ Wave 2 — UI clarity (2-3 days)
+   2.2  Scenario scoring legend
+   2.3  Risk register format
+   1.3  PDF export
+   4.2  Proposed vs enacted badges  (after 4.1)
+
+ Wave 3 — memo chat experience (4-6 days)
+   3.1  Split-panel layout
+   3.3  Chat backend endpoint
+   3.5  Dual sign-off section
+   3.6  Lawyer sign-off flow
+   3.4  Document upload
+   3.2  Inline comments
+
+ Wave 4 — analysis depth (3-4 days)
+   4.1  EUR-Lex proposed legislation
+   4.3  Industry selector + richer inputs
+
+================================================================================
+ OPEN QUESTIONS
+================================================================================
+
+ Q1. Signature capture — drawn signature (canvas) or typed-only for v1?
+ Q2. PDF export — browser print vs server-rendered? Server gives better
+     control but adds infra.
+ Q3. Supporting docs — persist across sessions or per-session only?
+ Q4. Industry list — hard-coded or configurable per firm?
+ Q5. Proposed-law timeline — how far forward do we look? (1yr / 3yr / all)
+
+================================================================================

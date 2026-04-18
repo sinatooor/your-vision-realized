@@ -70,18 +70,32 @@ ${statuteContext}
 ` : ""}
 Write the complete memo now. Minimum 800 words. Include at least 5 specific legal citations in the format [Jurisdiction — Law Name, Citation].${statuteExcerpts.length > 0 ? ` You have ${statuteExcerpts.length} primary source excerpt(s) above — quote them directly where relevant rather than paraphrasing.` : ""}`;
 
-  const memoMarkdown = await generateText(SYSTEM_PROMPT, userPrompt, 3000);
+  const memoMarkdown = await generateText(SYSTEM_PROMPT, userPrompt, 4000);
 
-  const lines = memoMarkdown.split("\n").filter((l) => l.trim());
+  const lines = memoMarkdown.split("\n");
   const summaryLines: string[] = [];
   let inSummary = false;
   for (const line of lines) {
-    if (line.toLowerCase().includes("executive summary")) { inSummary = true; continue; }
-    if (inSummary && line.startsWith("#")) break;
-    if (inSummary && line.trim()) summaryLines.push(line.trim());
-    if (summaryLines.length >= 4) break;
+    if (/executive summary/i.test(line) && /^#+\s/.test(line.trim())) {
+      inSummary = true;
+      continue;
+    }
+    if (inSummary && /^#+\s/.test(line.trim())) break;
+    if (inSummary) summaryLines.push(line);
   }
-  const executiveSummary = summaryLines.join(" ").slice(0, 600) || memoMarkdown.slice(0, 400);
+  const rawSummary = summaryLines.join("\n").trim();
+
+  // Ensure summary ends on a sentence boundary — if AI output happened to truncate, trim to last period.
+  const finalizeSummary = (text: string): string => {
+    if (!text) return memoMarkdown.split("\n").slice(0, 6).join("\n").trim();
+    const trimmed = text.trim();
+    const endsOnPunctuation = /[.!?"'`)\]]\s*$/.test(trimmed);
+    if (endsOnPunctuation) return trimmed;
+    const lastStop = Math.max(trimmed.lastIndexOf("."), trimmed.lastIndexOf("!"), trimmed.lastIndexOf("?"));
+    return lastStop > 0 ? trimmed.slice(0, lastStop + 1) : trimmed;
+  };
+
+  const executiveSummary = finalizeSummary(rawSummary);
 
   emitAgent(stream, AGENT, "memo_ready", "Client advisory memo ready", {
     wordCount: memoMarkdown.split(/\s+/).length,

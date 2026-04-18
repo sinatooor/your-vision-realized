@@ -140,11 +140,6 @@ export const SideNav = ({ open }: SideNavProps) => {
           );
         })}
       </nav>
-      <div className="mt-auto">
-        <button className="w-full bg-primary text-primary-foreground font-mono text-xs tracking-widest uppercase py-4 hover:bg-primary-container transition-colors">
-          Generate Brief
-        </button>
-      </div>
     </aside>
   );
 };

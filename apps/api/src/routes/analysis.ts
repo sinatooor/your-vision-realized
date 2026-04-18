@@ -1,7 +1,8 @@
 import { Router, Request, Response } from "express";
 import { v4 as uuidv4 } from "uuid";
 import { SSEStream } from "../lib/sse";
-import { sessions, runPipeline, Session } from "../orchestration/pipeline";
+import { sessions, runPipeline, Session, MemoChatTurn } from "../orchestration/pipeline";
+import { runMemoChat } from "../agents/agent7-memo-chat";
 
 export const analysisRouter = Router();
 
@@ -24,6 +25,9 @@ analysisRouter.post("/start", (req: Request, res: Response) => {
     error: null,
     createdAt: new Date().toISOString(),
     stream: null,
+    memoChat: [],
+    memoSignOff: null,
+    supportingDocuments: [],
   };
   sessions.set(sessionId, session);
 
@@ -126,6 +130,165 @@ analysisRouter.get("/:sessionId/memo", (req: Request, res: Response) => {
     markdown: session.result.memoMarkdown,
     executiveSummary: session.result.executiveSummary,
   });
+});
+
+// GET /api/analysis/:sessionId/memo-chat — fetch chat history + sign-off state
+analysisRouter.get("/:sessionId/memo-chat", (req: Request, res: Response) => {
+  const session = sessions.get(req.params["sessionId"] as string);
+  if (!session) {
+    res.status(404).json({ error: "Session not found" });
+    return;
+  }
+  res.json({
+    history: session.memoChat,
+    signOff: session.memoSignOff,
+    documents: session.supportingDocuments.map(({ id, name, size, uploadedAt }) => ({
+      id,
+      name,
+      size,
+      uploadedAt,
+    })),
+  });
+});
+
+// POST /api/analysis/:sessionId/memo-chat — lawyer sends instruction to AI
+analysisRouter.post("/:sessionId/memo-chat", async (req: Request, res: Response) => {
+  const session = sessions.get(req.params["sessionId"] as string);
+  if (!session?.result) {
+    res.status(404).json({ error: "Memo not ready for chat" });
+    return;
+  }
+
+  const { message } = req.body as { message?: string };
+  if (!message || typeof message !== "string" || message.trim().length === 0) {
+    res.status(400).json({ error: "message is required" });
+    return;
+  }
+
+  const userTurn: MemoChatTurn = {
+    role: "user",
+    content: message.trim(),
+    timestamp: new Date().toISOString(),
+  };
+  session.memoChat.push(userTurn);
+
+  try {
+    const chatResult = await runMemoChat(
+      session.result.memoMarkdown,
+      message.trim(),
+      session.memoChat.slice(0, -1),
+      session.supportingDocuments,
+    );
+
+    session.result.memoMarkdown = chatResult.updatedMemoMarkdown;
+    session.result.executiveSummary =
+      chatResult.updatedExecutiveSummary || session.result.executiveSummary;
+
+    const assistantTurn: MemoChatTurn = {
+      role: "assistant",
+      content: chatResult.reply,
+      timestamp: new Date().toISOString(),
+    };
+    session.memoChat.push(assistantTurn);
+
+    res.json({
+      reply: chatResult.reply,
+      memoMarkdown: chatResult.updatedMemoMarkdown,
+      executiveSummary: session.result.executiveSummary,
+      history: session.memoChat,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Memo chat failed";
+    // Remove the user turn we speculatively pushed, so the client can retry cleanly.
+    session.memoChat.pop();
+    res.status(500).json({ error: msg });
+  }
+});
+
+// POST /api/analysis/:sessionId/sign-off — lawyer digital sign-off
+analysisRouter.post("/:sessionId/sign-off", (req: Request, res: Response) => {
+  const session = sessions.get(req.params["sessionId"] as string);
+  if (!session?.result) {
+    res.status(404).json({ error: "Memo not ready to sign" });
+    return;
+  }
+
+  const { lawyerName, signatureDataUrl } = req.body as {
+    lawyerName?: string;
+    signatureDataUrl?: string;
+  };
+
+  if (!lawyerName || typeof lawyerName !== "string" || lawyerName.trim().length === 0) {
+    res.status(400).json({ error: "lawyerName is required" });
+    return;
+  }
+
+  session.memoSignOff = {
+    lawyerName: lawyerName.trim(),
+    signedAt: new Date().toISOString(),
+    signatureDataUrl:
+      typeof signatureDataUrl === "string" && signatureDataUrl.startsWith("data:image/")
+        ? signatureDataUrl
+        : undefined,
+  };
+
+  res.json({ signOff: session.memoSignOff });
+});
+
+// DELETE /api/analysis/:sessionId/sign-off — revoke sign-off
+analysisRouter.delete("/:sessionId/sign-off", (req: Request, res: Response) => {
+  const session = sessions.get(req.params["sessionId"] as string);
+  if (!session) {
+    res.status(404).json({ error: "Session not found" });
+    return;
+  }
+  session.memoSignOff = null;
+  res.json({ ok: true });
+});
+
+// POST /api/analysis/:sessionId/documents — register a supporting document
+// (Simple JSON payload; the frontend reads text client-side and ships the excerpt.)
+analysisRouter.post("/:sessionId/documents", (req: Request, res: Response) => {
+  const session = sessions.get(req.params["sessionId"] as string);
+  if (!session) {
+    res.status(404).json({ error: "Session not found" });
+    return;
+  }
+
+  const { name, size, textExcerpt } = req.body as {
+    name?: string;
+    size?: number;
+    textExcerpt?: string;
+  };
+
+  if (!name || typeof name !== "string") {
+    res.status(400).json({ error: "name is required" });
+    return;
+  }
+
+  const doc = {
+    id: uuidv4(),
+    name: name.slice(0, 200),
+    size: typeof size === "number" ? size : 0,
+    uploadedAt: new Date().toISOString(),
+    textExcerpt:
+      typeof textExcerpt === "string" ? textExcerpt.slice(0, 20000) : undefined,
+  };
+  session.supportingDocuments.push(doc);
+
+  res.json({ document: { id: doc.id, name: doc.name, size: doc.size, uploadedAt: doc.uploadedAt } });
+});
+
+// DELETE /api/analysis/:sessionId/documents/:docId
+analysisRouter.delete("/:sessionId/documents/:docId", (req: Request, res: Response) => {
+  const session = sessions.get(req.params["sessionId"] as string);
+  if (!session) {
+    res.status(404).json({ error: "Session not found" });
+    return;
+  }
+  const docId = req.params["docId"];
+  session.supportingDocuments = session.supportingDocuments.filter((d) => d.id !== docId);
+  res.json({ ok: true });
 });
 
 // GET /api/analysis/demo — pre-run demo session

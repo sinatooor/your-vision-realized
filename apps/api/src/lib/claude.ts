@@ -28,7 +28,7 @@ export async function extractStructured<T>(
 ): Promise<T> {
   try {
     const response = await getClient().messages.create({
-      model: "claude-sonnet-4-5",
+      model: "claude-sonnet-4-6",
       max_tokens: 4096,
       system: `${systemPrompt}\n\nSchema:\n${schema}`,
       messages: [{ role: "user", content: userPrompt }],
@@ -54,7 +54,7 @@ export async function generateText(
 ): Promise<string> {
   try {
     const response = await getClient().messages.create({
-      model: "claude-sonnet-4-5",
+      model: "claude-sonnet-4-6",
       max_tokens: maxTokens,
       system: systemPrompt,
       messages: [{ role: "user", content: userPrompt }],

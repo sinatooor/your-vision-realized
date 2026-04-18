@@ -8,6 +8,27 @@ import { planResolution } from "../agents/agent5-planner";
 import { generateMemo } from "../agents/agent6-memo";
 import { AnalysisResult, ExpansionTwin } from "../types";
 
+export interface MemoChatTurn {
+  role: "user" | "assistant";
+  content: string;
+  timestamp: string;
+  attachments?: { name: string; size: number }[];
+}
+
+export interface MemoSignOff {
+  lawyerName: string;
+  signedAt: string;
+  signatureDataUrl?: string;
+}
+
+export interface SupportingDocument {
+  id: string;
+  name: string;
+  size: number;
+  uploadedAt: string;
+  textExcerpt?: string;
+}
+
 export interface Session {
   id: string;
   status: "pending" | "awaiting_twin" | "running" | "complete" | "error";
@@ -19,6 +40,9 @@ export interface Session {
   createdAt: string;
   stream: SSEStream | null;
   continueFromScout?: () => void;
+  memoChat: MemoChatTurn[];
+  memoSignOff: MemoSignOff | null;
+  supportingDocuments: SupportingDocument[];
 }
 
 export const sessions = new Map<string, Session>();

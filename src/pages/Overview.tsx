@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { WorldMap } from "@/components/Map/WorldMap";
 import { JurisdictionPanel } from "@/components/Panel/JurisdictionPanel";
@@ -73,19 +73,20 @@ export default function Overview() {
     isRunning,
     isComplete,
     error,
+    hasNavigatedToResults,
+    markNavigatedToResults,
     handleCountryClick,
     handleClose,
     handleRunAnalysis,
     confirmTwinAndContinue,
   } = useAnalysis();
 
-  const navigatedRef = useRef(false);
   useEffect(() => {
-    if (result && !navigatedRef.current) {
-      navigatedRef.current = true;
+    if (result && !hasNavigatedToResults) {
+      markNavigatedToResults();
       navigate("/conflicts");
     }
-  }, [result, navigate]);
+  }, [result, hasNavigatedToResults, markNavigatedToResults, navigate]);
 
   return (
     <main

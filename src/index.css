@@ -146,3 +146,63 @@
     box-shadow: 0 4px 40px -10px hsl(var(--on-surface) / 0.06);
   }
 }
+
+/* ---------------------------------------------------------------------------
+   PRINT STYLES — PDF export of the advisory memo.
+   Clicking "EXPORT AS PDF" triggers window.print(); the rules below hide
+   navigation, side panels, and inflate the memo body to a clean paginated
+   layout that prints reliably from Chrome/Safari.
+--------------------------------------------------------------------------- */
+@media print {
+  @page {
+    size: A4;
+    margin: 18mm 16mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  /* Hide everything by default, then explicitly un-hide the memo root. */
+  body * {
+    visibility: hidden;
+  }
+  .memo-export-root,
+  .memo-export-root * {
+    visibility: visible;
+  }
+
+  .memo-export-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    background: #ffffff;
+  }
+
+  /* Suppress nav, sidebars, floating controls, modals. */
+  nav,
+  aside,
+  header,
+  .print\:hidden,
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  /* Keep headings and sign-off blocks together with their following content. */
+  .memo-export-root h1,
+  .memo-export-root h2,
+  .memo-export-root h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  .memo-export-root table,
+  .memo-export-root blockquote {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

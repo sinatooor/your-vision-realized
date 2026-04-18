@@ -6,18 +6,30 @@ interface ConflictMapProps {
   obligations: Obligation[];
 }
 
-const SEVERITY_COLORS: Record<Severity, string> = {
-  critical: "bg-critical text-critical-foreground",
-  high: "bg-high text-high-foreground",
-  medium: "bg-medium text-medium-foreground",
-  low: "bg-low text-low-foreground",
+type Stoplight = "red" | "yellow" | "green";
+
+const STOPLIGHT_LABELS: Record<Stoplight, string> = {
+  red: "HIGH RISK",
+  yellow: "MODERATE",
+  green: "LOW RISK",
 };
 
-const SEVERITY_DOT: Record<Severity, string> = {
-  critical: "bg-critical",
-  high: "bg-high",
-  medium: "bg-medium",
-  low: "bg-low",
+const STOPLIGHT_BADGE: Record<Stoplight, string> = {
+  red: "bg-critical text-critical-foreground",
+  yellow: "bg-medium text-medium-foreground",
+  green: "bg-low text-low-foreground",
+};
+
+const STOPLIGHT_DOT: Record<Stoplight, string> = {
+  red: "bg-critical",
+  yellow: "bg-medium",
+  green: "bg-low",
+};
+
+const toStoplight = (s: Severity): Stoplight => {
+  if (s === "critical" || s === "high") return "red";
+  if (s === "medium") return "yellow";
+  return "green";
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -31,7 +43,8 @@ const TYPE_LABELS: Record<string, string> = {
 export function ConflictMap({ conflicts, obligations: _obligations }: ConflictMapProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  const countBySeverity = (s: Severity) => conflicts.filter((c) => c.severity === s).length;
+  const countByStoplight = (bucket: Stoplight) =>
+    conflicts.filter((c) => toStoplight(c.severity) === bucket).length;
 
   const toggle = (id: string) => {
     setExpanded((prev) => {
@@ -44,22 +57,24 @@ export function ConflictMap({ conflicts, obligations: _obligations }: ConflictMa
 
   return (
     <div>
-      {/* Summary bar */}
+      {/* Summary bar — 3-color stoplight */}
       <div className="flex gap-6 mb-8">
-        {(["critical", "high", "medium", "low"] as Severity[]).map((s) => (
-          <div key={s} className="flex items-center gap-2">
-            <div className={`w-3 h-3 ${SEVERITY_DOT[s]}`} />
+        {(["red", "yellow", "green"] as Stoplight[]).map((bucket) => (
+          <div key={bucket} className="flex items-center gap-2">
+            <div className={`w-3 h-3 ${STOPLIGHT_DOT[bucket]}`} />
             <span className="font-mono text-[10px] tracking-widest uppercase text-outline">
-              {s}:
+              {STOPLIGHT_LABELS[bucket]}:
             </span>
-            <span className="font-headline text-lg font-bold text-primary">{countBySeverity(s)}</span>
+            <span className="font-headline text-lg font-bold text-primary">{countByStoplight(bucket)}</span>
           </div>
         ))}
       </div>
 
       {/* Conflict list */}
       <div className="space-y-4">
-        {conflicts.map((conflict) => (
+        {conflicts.map((conflict) => {
+          const bucket = toStoplight(conflict.severity);
+          return (
           <div key={conflict.id} className="border border-outline-variant">
             {/* Blocking banner */}
             {conflict.blocksExpansion && (
@@ -73,8 +88,8 @@ export function ConflictMap({ conflicts, obligations: _obligations }: ConflictMa
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <span className={`font-mono text-[9px] tracking-widest uppercase px-2 py-0.5 ${SEVERITY_COLORS[conflict.severity]}`}>
-                      {conflict.severity}
+                    <span className={`font-mono text-[9px] tracking-widest uppercase px-2 py-0.5 ${STOPLIGHT_BADGE[bucket]}`}>
+                      {STOPLIGHT_LABELS[bucket]}
                     </span>
                     <span className="font-mono text-[9px] tracking-widest uppercase text-outline border border-outline-variant px-2 py-0.5">
                       {TYPE_LABELS[conflict.type] ?? conflict.type.toUpperCase()}
@@ -124,7 +139,8 @@ export function ConflictMap({ conflicts, obligations: _obligations }: ConflictMa
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {conflicts.length === 0 && (

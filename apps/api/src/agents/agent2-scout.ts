@@ -3,7 +3,7 @@ import { join } from "path";
 import { v4 as uuidv4 } from "uuid";
 import { SSEStream, emitAgent } from "../lib/sse";
 import { ExpansionTwin, Obligation } from "../types";
-import { enrichObligationFromEurLex, CELEX_MAP } from "../integrations/eurlex";
+import { enrichObligationFromEurLex, CELEX_MAP, loadUpcomingObligations } from "../integrations/eurlex";
 import { screenEntity, screenCompany, screenMultipleEntities } from "../integrations/opensanctions";
 import { resolveGleifResult } from "../integrations/gleif";
 import { searchCompany, getCompanyOfficers } from "../integrations/companies-house";
@@ -213,6 +213,23 @@ export async function scoutJurisdictions(
     }
   }
   const deduplicated = Array.from(seen.values());
+
+  // ── EUR-Lex upcoming/proposed legislation ───────────────────────────────────
+  const euCountries = unique.filter((c) => EU_MEMBER_STATES.has(c));
+  if (euCountries.length > 0) {
+    emitAgent(stream, AGENT, "api_call", `Loading upcoming EU legislation for ${euCountries.join(", ")}…`);
+    const upcoming = await loadUpcomingObligations(euCountries, twin.company.industry).catch(() => [] as Obligation[]);
+    if (upcoming.length > 0) {
+      const upcomingIds = new Set(upcoming.map((o) => o.id));
+      deduplicated.push(...upcoming.filter((o) => !upcomingIds.has(o.id) || !deduplicated.some((d) => d.id === o.id)));
+      emitAgent(stream, AGENT, "api_result",
+        `EUR-Lex upcoming: ${upcoming.length} proposed/upcoming instrument(s) added`,
+        { count: upcoming.length, laws: upcoming.map((o) => o.title) },
+      );
+    } else {
+      emitAgent(stream, AGENT, "api_result", "EUR-Lex upcoming: no matching instruments for this jurisdiction/industry", {});
+    }
+  }
 
   const byCountry = unique.reduce<Record<string, number>>((acc, c) => {
     acc[c] = deduplicated.filter((o) => o.jurisdiction === c).length;

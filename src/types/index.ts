@@ -72,6 +72,8 @@ export interface ObligationSource {
   isLive: boolean;
 }
 
+export type LegislationStatus = "in-force" | "proposed" | "upcoming";
+
 export interface Obligation {
   id: string;
   jurisdiction: string;
@@ -84,6 +86,10 @@ export interface Obligation {
   source: ObligationSource;
   confidence: number;
   requiresLocalCounsel: boolean;
+  /** Legal status of the underlying instrument. Undefined ≈ "in-force" (legacy records). */
+  legislationStatus?: LegislationStatus;
+  /** ISO date when the instrument takes (or took) effect. */
+  effectiveDate?: string;
 }
 
 export type ConflictType =
@@ -180,10 +186,23 @@ export interface PresenceData {
   entityType: EntityType;
 }
 
+export type IndustryType =
+  | "hr-saas"
+  | "fintech"
+  | "biomedical"
+  | "manufacturing"
+  | "e-commerce"
+  | "logistics"
+  | "legaltech"
+  | "other";
+
 export interface AnalysisParams {
   targetHeadcount: number;
   arrangement: "remote" | "hybrid" | "on-site";
   entityStructure: EntityType;
   startDate: string;
   dataType: "personal" | "hr-only" | "none";
+  industry: IndustryType;
+  revenueEur: "under-1m" | "1m-10m" | "10m-100m" | "over-100m";
+  hasAiFeatures: boolean;
 }
