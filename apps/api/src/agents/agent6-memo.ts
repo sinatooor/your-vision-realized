@@ -2,6 +2,7 @@ import { generateText } from "../lib/claude";
 import { SSEStream, emitAgent } from "../lib/sse";
 import { Action, Conflict, ExpansionTwin, Obligation, Scenario } from "../types";
 import { loadStatuteExcerpts, formatStatuteContext } from "../data/statute-loader";
+import { NewsScoutResult } from "../integrations/perplexity-news";
 
 const AGENT = "Agent 6 — Memo Writer";
 
@@ -13,7 +14,8 @@ Structure your memo with these sections:
 3. Recommended Structure (analysis of the recommended expansion vehicle)
 4. Risk Register (table-style: Obligation | Jurisdiction | Severity | Action)
 5. 30/60/90-Day Action Plan
-6. Evidence Pack (list of all sources cited)`;
+6. Recent Regulatory Developments (cite news sources where supplied)
+7. Evidence Pack (list of all sources cited)`;
 
 export async function generateMemo(
   twin: ExpansionTwin,
@@ -22,6 +24,7 @@ export async function generateMemo(
   scenarios: Scenario[],
   actions: Action[],
   stream: SSEStream,
+  recentDevelopments: NewsScoutResult[] = [],
 ): Promise<{ executiveSummary: string; memoMarkdown: string }> {
   emitAgent(stream, AGENT, "agent_start", "Drafting client advisory memo…");
 
@@ -64,11 +67,18 @@ ${targetObligations.map((o) => `- [${o.jurisdiction}] ${o.title} (${o.severity})
 
 ## ACTION PLAN
 ${actions.map((a) => `[${a.horizon}] ${a.blocking ? "BLOCKING: " : ""}${a.title} (${a.owner}, ${a.estimatedDays}d)`).join("\n")}
+${recentDevelopments.filter((n) => n.isLive && (n.summary || n.highlights.length)).length > 0 ? `
+## RECENT REGULATORY DEVELOPMENTS (last 30 days, live news)
+${recentDevelopments.filter((n) => n.isLive).map((n) => `### ${n.countryName}
+${n.summary}
+${n.highlights.map((h) => `- ${h}`).join("\n")}
+Sources: ${n.citations.map((c) => `${c.title} (${c.url})`).join("; ") || "n/a"}`).join("\n\n")}
+` : ""}
 ${statuteContext ? `
 ## PRIMARY SOURCE TEXT (cite directly — these are the authoritative statute provisions)
 ${statuteContext}
 ` : ""}
-Write the complete memo now. Minimum 800 words. Include at least 5 specific legal citations in the format [Jurisdiction — Law Name, Citation].${statuteExcerpts.length > 0 ? ` You have ${statuteExcerpts.length} primary source excerpt(s) above — quote them directly where relevant rather than paraphrasing.` : ""}`;
+Write the complete memo now. Minimum 800 words. Include at least 5 specific legal citations in the format [Jurisdiction — Law Name, Citation].${statuteExcerpts.length > 0 ? ` You have ${statuteExcerpts.length} primary source excerpt(s) above — quote them directly where relevant rather than paraphrasing.` : ""}${recentDevelopments.some((n) => n.isLive) ? " Include the Recent Regulatory Developments section with date-stamped items and source URLs." : ""}`;
 
   const memoMarkdown = await generateText(SYSTEM_PROMPT, userPrompt, 4000);
 

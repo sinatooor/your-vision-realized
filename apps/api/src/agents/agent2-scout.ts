@@ -8,6 +8,7 @@ import { screenEntity, screenCompany, screenMultipleEntities } from "../integrat
 import { resolveGleifResult } from "../integrations/gleif";
 import { searchCompany, getCompanyOfficers } from "../integrations/companies-house";
 import { validateVATNumber } from "../integrations/vies";
+import { fetchTargetCountryNews, NewsScoutResult } from "../integrations/perplexity-news";
 
 const AGENT = "Agent 2 — Jurisdiction Scout";
 
@@ -81,10 +82,15 @@ async function scoutCountry(
   return filtered;
 }
 
+export interface ScoutOutput {
+  obligations: Obligation[];
+  recentDevelopments: NewsScoutResult[];
+}
+
 export async function scoutJurisdictions(
   twin: ExpansionTwin,
   stream: SSEStream,
-): Promise<Obligation[]> {
+): Promise<ScoutOutput> {
   emitAgent(stream, AGENT, "agent_start", "Beginning jurisdiction intelligence retrieval…");
 
   const countries = [twin.company.hqCountry, ...twin.expansion.targetCountries];
@@ -236,10 +242,24 @@ export async function scoutJurisdictions(
     return acc;
   }, {});
 
+  // ── Perplexity News Scout (target jurisdictions only) ──────────────────────
+  const recentDevelopments: NewsScoutResult[] = [];
+  for (const target of twin.expansion.targetCountries) {
+    emitAgent(stream, AGENT, "api_call", `Scouting recent regulatory news for ${target} (last 30 days)…`);
+    const news = await fetchTargetCountryNews(target, twin.company.industry).catch(() => null);
+    if (news) {
+      recentDevelopments.push(news);
+      emitAgent(stream, AGENT, "api_result",
+        `${news.isLive ? "✓" : "○"} News (${news.countryName}): ${news.isLive ? `${news.highlights.length} item(s), ${news.citations.length} source(s)` : news.reason ?? "unavailable"}`,
+        { isLive: news.isLive, highlights: news.highlights.length, citations: news.citations.length },
+      );
+    }
+  }
+
   emitAgent(stream, AGENT, "agent_complete",
     `Retrieved ${deduplicated.length} obligations across ${unique.length} jurisdictions`,
     { total: deduplicated.length, byCountry },
   );
 
-  return deduplicated;
+  return { obligations: deduplicated, recentDevelopments };
 }
