@@ -232,15 +232,29 @@ function writeLocal(key: string, value: unknown) {
 
 // ── Context ───────────────────────────────────────────────────────────────────
 
+export interface CustomCompany {
+  id: string; // "custom:<uuid>"
+  label: string;
+  tagline: string;
+  company: CompanyProfile;
+  footprint: FootprintEntry[];
+  dataArch: DataArchitecture;
+}
+
+export type ActiveProfileId = PresetId | string | null;
+
 interface CompanyContextValue {
   company: CompanyProfile;
   footprint: FootprintEntry[];
   dataArch: DataArchitecture;
-  activePreset: PresetId | null;
+  activePreset: ActiveProfileId;
+  customCompanies: CustomCompany[];
   setCompany: (updater: CompanyProfile | ((prev: CompanyProfile) => CompanyProfile)) => void;
   setFootprint: (updater: FootprintEntry[] | ((prev: FootprintEntry[]) => FootprintEntry[])) => void;
   setDataArch: (updater: DataArchitecture | ((prev: DataArchitecture) => DataArchitecture)) => void;
   loadPreset: (id: PresetId) => void;
+  loadCustom: (id: string) => void;
+  addCustomCompany: (name: string) => string;
 }
 
 const CompanyContext = createContext<CompanyContextValue | null>(null);
@@ -248,8 +262,8 @@ const CompanyContext = createContext<CompanyContextValue | null>(null);
 const DEFAULT_PRESET = COMPANY_PRESETS.nordhr;
 
 export function CompanyProvider({ children }: { children: ReactNode }) {
-  const [activePreset, setActivePreset] = useState<PresetId | null>(
-    () => readLocal<PresetId | null>("tg_active_preset", "nordhr"),
+  const [activePreset, setActivePreset] = useState<ActiveProfileId>(
+    () => readLocal<ActiveProfileId>("tg_active_preset", "nordhr"),
   );
 
   const [company, setCompanyRaw] = useState<CompanyProfile>(
@@ -264,17 +278,42 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     () => readLocal("tg_data_arch", DEFAULT_PRESET.dataArch),
   );
 
+  const [customCompanies, setCustomCompaniesRaw] = useState<CustomCompany[]>(
+    () => readLocal<CustomCompany[]>("tg_custom_companies", []),
+  );
+
+  const persistCustom = (next: CustomCompany[]) => {
+    setCustomCompaniesRaw(next);
+    writeLocal("tg_custom_companies", next);
+  };
+
+  // Keep currently-active custom company synced with edits
+  const syncActiveCustom = useCallback(
+    (patch: Partial<Pick<CustomCompany, "company" | "footprint" | "dataArch">>) => {
+      setCustomCompaniesRaw((prev) => {
+        if (!activePreset || (activePreset as string).indexOf("custom:") !== 0) return prev;
+        const next = prev.map((c) => (c.id === activePreset ? { ...c, ...patch } : c));
+        writeLocal("tg_custom_companies", next);
+        return next;
+      });
+    },
+    [activePreset],
+  );
+
   const setCompany = useCallback(
     (updater: CompanyProfile | ((prev: CompanyProfile) => CompanyProfile)) => {
       setCompanyRaw((prev) => {
         const next = typeof updater === "function" ? updater(prev) : updater;
         writeLocal("tg_company_profile", next);
+        syncActiveCustom({ company: next });
         return next;
       });
-      setActivePreset(null);
-      writeLocal("tg_active_preset", null);
+      if (!activePreset || (activePreset as string).indexOf("custom:") !== 0) {
+        setActivePreset(null);
+        writeLocal("tg_active_preset", null);
+      }
     },
-    [],
+    [activePreset, syncActiveCustom],
   );
 
   const setFootprint = useCallback(
@@ -282,12 +321,15 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       setFootprintRaw((prev) => {
         const next = typeof updater === "function" ? updater(prev) : updater;
         writeLocal("tg_footprint", next);
+        syncActiveCustom({ footprint: next });
         return next;
       });
-      setActivePreset(null);
-      writeLocal("tg_active_preset", null);
+      if (!activePreset || (activePreset as string).indexOf("custom:") !== 0) {
+        setActivePreset(null);
+        writeLocal("tg_active_preset", null);
+      }
     },
-    [],
+    [activePreset, syncActiveCustom],
   );
 
   const setDataArch = useCallback(
@@ -295,12 +337,15 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       setDataArchRaw((prev) => {
         const next = typeof updater === "function" ? updater(prev) : updater;
         writeLocal("tg_data_arch", next);
+        syncActiveCustom({ dataArch: next });
         return next;
       });
-      setActivePreset(null);
-      writeLocal("tg_active_preset", null);
+      if (!activePreset || (activePreset as string).indexOf("custom:") !== 0) {
+        setActivePreset(null);
+        writeLocal("tg_active_preset", null);
+      }
     },
-    [],
+    [activePreset, syncActiveCustom],
   );
 
   const loadPreset = useCallback((id: PresetId) => {
@@ -315,9 +360,87 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     writeLocal("tg_active_preset", id);
   }, []);
 
+  const loadCustom = useCallback(
+    (id: string) => {
+      const c = customCompanies.find((x) => x.id === id);
+      if (!c) return;
+      setCompanyRaw(c.company);
+      setFootprintRaw(c.footprint);
+      setDataArchRaw(c.dataArch);
+      setActivePreset(c.id);
+      writeLocal("tg_company_profile", c.company);
+      writeLocal("tg_footprint", c.footprint);
+      writeLocal("tg_data_arch", c.dataArch);
+      writeLocal("tg_active_preset", c.id);
+    },
+    [customCompanies],
+  );
+
+  const addCustomCompany = useCallback(
+    (name: string) => {
+      const id = `custom:${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+      const blankCompany: CompanyProfile = {
+        name: name || "Untitled Company",
+        hqCountry: "",
+        legalEntity: "",
+        industry: "",
+        headcount: 0,
+        revenue: "",
+        productCategory: "",
+        hasAiFeatures: false,
+        founded: "",
+        notes: "",
+      };
+      const blankFootprint: FootprintEntry[] = [];
+      const blankDataArch: DataArchitecture = {
+        categories: [],
+        storageJurisdiction: "",
+        centralized: true,
+        transferFlows: [],
+        retentionPolicy: "",
+        dpaInPlace: false,
+      };
+      const newCustom: CustomCompany = {
+        id,
+        label: blankCompany.name,
+        tagline: "Custom profile",
+        company: blankCompany,
+        footprint: blankFootprint,
+        dataArch: blankDataArch,
+      };
+      const next = [...customCompanies, newCustom];
+      persistCustom(next);
+
+      // Activate immediately
+      setCompanyRaw(blankCompany);
+      setFootprintRaw(blankFootprint);
+      setDataArchRaw(blankDataArch);
+      setActivePreset(id);
+      writeLocal("tg_company_profile", blankCompany);
+      writeLocal("tg_footprint", blankFootprint);
+      writeLocal("tg_data_arch", blankDataArch);
+      writeLocal("tg_active_preset", id);
+
+      return id;
+    },
+    [customCompanies],
+  );
+
   return (
     <CompanyContext.Provider
-      value={{ company, footprint, dataArch, activePreset, setCompany, setFootprint, setDataArch, loadPreset }}
+      value={{
+        company,
+        footprint,
+        dataArch,
+        activePreset,
+        customCompanies,
+        setCompany,
+        setFootprint,
+        setDataArch,
+        loadPreset,
+        loadCustom,
+        addCustomCompany,
+      }}
     >
       {children}
     </CompanyContext.Provider>
