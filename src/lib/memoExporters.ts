@@ -192,7 +192,7 @@ function parseInline(text: string): InlineRun[] {
 
 /* ---------------- PDF Export ---------------- */
 
-export function exportMemoAsPdf(memo: { executiveSummary: string; memoMarkdown: string }) {
+export function exportMemoAsPdf(memo: MemoExportPayload) {
   const doc = new jsPDF({ unit: "pt", format: "letter" });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
