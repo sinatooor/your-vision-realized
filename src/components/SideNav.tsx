@@ -1,19 +1,64 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { MaterialIcon } from "./MaterialIcon";
-
-const items = [
-  { icon: "public", label: "Region Select" },
-  { icon: "gavel", label: "Regulatory Scope" },
-  { icon: "payments", label: "Tax Exposure" },
-  { icon: "account_tree", label: "Entity Structure" },
-];
+import { SIDE_NAV_SECTIONS } from "@/config/sideNavSections";
 
 interface SideNavProps {
   open: boolean;
 }
 
 export const SideNav = ({ open }: SideNavProps) => {
-  const [active, setActive] = useState("Regulatory Scope");
+  const location = useLocation();
+  const config = SIDE_NAV_SECTIONS[location.pathname] ?? SIDE_NAV_SECTIONS["/"];
+  const items = config.sections;
+  const [active, setActive] = useState<string>(items[0]?.id ?? "");
+
+  // Reset active when route changes
+  useEffect(() => {
+    setActive(items[0]?.id ?? "");
+  }, [location.pathname, items]);
+
+  // Scroll-spy: observe sections and update active
+  useEffect(() => {
+    const elements = items
+      .map((i) => document.getElementById(i.id))
+      .filter((el): el is HTMLElement => !!el);
+
+    if (elements.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Pick the entry closest to top that is intersecting
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible[0]) setActive(visible[0].target.id);
+      },
+      {
+        // Account for the 89px top header
+        rootMargin: "-100px 0px -60% 0px",
+        threshold: [0, 0.25, 0.5, 1],
+      },
+    );
+
+    elements.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [items, location.pathname]);
+
+  const handleClick = (id: string) => {
+    setActive(id);
+    const el = document.getElementById(id);
+    if (el) {
+      // Find scrollable parent (main with overflow-auto)
+      const main = el.closest("main") || document.scrollingElement;
+      if (main && main !== document.scrollingElement) {
+        const top = el.getBoundingClientRect().top - main.getBoundingClientRect().top + main.scrollTop - 24;
+        (main as HTMLElement).scrollTo({ top, behavior: "smooth" });
+      } else {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  };
 
   return (
     <aside
@@ -22,16 +67,16 @@ export const SideNav = ({ open }: SideNavProps) => {
       }`}
     >
       <div className="mb-12 px-2">
-        <h2 className="font-headline text-2xl text-primary mb-2">JurisdictIQ Analysis</h2>
-        <p className="mono-label">Expansion Parameters</p>
+        <h2 className="font-headline text-2xl text-primary mb-2">{config.title}</h2>
+        <p className="mono-label">Section Navigation</p>
       </div>
-      <nav className="flex flex-col space-y-2 flex-1">
+      <nav className="flex flex-col space-y-2 flex-1 overflow-y-auto">
         {items.map((item) => {
-          const isActive = item.label === active;
+          const isActive = item.id === active;
           return (
             <button
-              key={item.label}
-              onClick={() => setActive(item.label)}
+              key={item.id}
+              onClick={() => handleClick(item.id)}
               className={`flex items-center space-x-4 px-4 py-3 transition-all duration-200 text-left ${
                 isActive
                   ? "bg-surface-lowest text-primary font-bold border-l-4 border-primary"
@@ -39,9 +84,7 @@ export const SideNav = ({ open }: SideNavProps) => {
               }`}
             >
               <MaterialIcon name={item.icon} className="text-[20px]" />
-              <span className="font-mono uppercase tracking-widest text-xs">
-                {item.label}
-              </span>
+              <span className="font-mono uppercase tracking-widest text-xs">{item.label}</span>
             </button>
           );
         })}
