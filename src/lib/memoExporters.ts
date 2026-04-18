@@ -391,6 +391,48 @@ export function exportMemoAsPdf(memo: MemoExportPayload) {
     }
   }
 
+
+  // Sign-off block
+  if (memo.signOff) {
+    y += 24;
+    ensure(180);
+    doc.setDrawColor(...PRIMARY);
+    doc.setLineWidth(1);
+    doc.line(marginX, y, marginX + contentW, y);
+    y += 20;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...PRIMARY);
+    doc.text("APPROVED & SIGNED OFF", marginX, y);
+    y += 18;
+
+    if (memo.signOff.signatureDataUrl) {
+      try {
+        ensure(80);
+        doc.addImage(memo.signOff.signatureDataUrl, "PNG", marginX, y, 200, 60, undefined, "FAST");
+        y += 70;
+      } catch {
+        // ignore image errors
+      }
+    }
+
+    doc.setDrawColor(...RULE);
+    doc.setLineWidth(0.5);
+    doc.line(marginX, y, marginX + 240, y);
+    y += 14;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...PRIMARY);
+    doc.text(memo.signOff.lawyerName, marginX, y);
+    y += 14;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...MUTED);
+    doc.text(`Signed ${formatSignedDate(memo.signOff.signedAt)}`, marginX, y);
+    y += 12;
+    doc.text(`${FIRM_NAME} — Approved for client delivery`, marginX, y);
+  }
+
   addFooter();
   doc.save(`${fileBase()}.pdf`);
 }
