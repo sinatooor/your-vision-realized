@@ -6,7 +6,7 @@ import { AgentStream } from "@/components/Panel/AgentStream";
 import { MaterialIcon } from "@/components/MaterialIcon";
 import { useAnalysis } from "@/contexts/AnalysisContext";
 import { useCompany } from "@/contexts/CompanyContext";
-import type { CompanyProfile, FootprintEntry, DataArchitecture } from "@/contexts/CompanyContext";
+import type { CompanyProfile, FootprintEntry, DataArchitecture, TransferFlow } from "@/contexts/CompanyContext";
 
 // ── Inline-editable text field ────────────────────────────────────────────────
 
