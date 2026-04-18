@@ -1,12 +1,9 @@
 import { Link } from "react-router-dom";
 import { useAnalysis } from "@/contexts/AnalysisContext";
-import { useCompany, COMPANY_PRESETS } from "@/contexts/CompanyContext";
-import type { PresetId } from "@/contexts/CompanyContext";
 import { MaterialIcon } from "@/components/MaterialIcon";
 
 export default function Settings() {
   const { result, resetAnalysis } = useAnalysis();
-  const { activePreset, loadPreset, company } = useCompany();
 
   return (
     <main
