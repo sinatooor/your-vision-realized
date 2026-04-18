@@ -391,6 +391,58 @@ export function exportMemoAsPdf(memo: MemoExportPayload) {
     }
   }
 
+  // Sign-off block
+  if (memo.signOff) {
+    children.push(
+      new Paragraph({
+        children: [],
+        border: { bottom: { color: "1E293B", space: 4, style: BorderStyle.SINGLE, size: 12 } },
+        spacing: { before: 480, after: 240 },
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: "APPROVED & SIGNED OFF", bold: true, size: 22, color: "1E293B" })],
+        spacing: { after: 200 },
+      }),
+    );
+
+    if (memo.signOff.signatureDataUrl) {
+      const img = dataUrlToUint8Array(memo.signOff.signatureDataUrl);
+      if (img) {
+        children.push(
+          new Paragraph({
+            children: [
+              new ImageRun({
+                type: img.type,
+                data: img.bytes,
+                transformation: { width: 220, height: 70 },
+                altText: { title: "Signature", description: `${memo.signOff.lawyerName} signature`, name: "signature" },
+              }),
+            ],
+            spacing: { after: 80 },
+          }),
+        );
+      }
+    }
+
+    children.push(
+      new Paragraph({
+        children: [new TextRun({ text: "_________________________________", size: 20, color: "64748B" })],
+        spacing: { after: 80 },
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: memo.signOff.lawyerName, bold: true, size: 24, color: "1E293B" })],
+        spacing: { after: 40 },
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: `Signed ${formatSignedDate(memo.signOff.signedAt)}`, size: 18, color: "64748B" })],
+        spacing: { after: 40 },
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: `${FIRM_NAME} — Approved for client delivery`, italics: true, size: 18, color: "64748B" })],
+      }),
+    );
+  }
+
 
   // Sign-off block
   if (memo.signOff) {
@@ -439,7 +491,7 @@ export function exportMemoAsPdf(memo: MemoExportPayload) {
 
 /* ---------------- DOCX Export ---------------- */
 
-export async function exportMemoAsDocx(memo: { executiveSummary: string; memoMarkdown: string }) {
+export async function exportMemoAsDocx(memo: MemoExportPayload) {
   const inlineToRuns = (text: string, baseOpts: { bold?: boolean; italic?: boolean; size?: number; color?: string } = {}) =>
     parseInline(text).map(
       (r) =>
