@@ -1,4 +1,4 @@
-import { NavLink, Link } from "react-router-dom";
+import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
 import { MaterialIcon } from "@/components/MaterialIcon";
 
 interface NavItem {
