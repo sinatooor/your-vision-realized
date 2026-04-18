@@ -251,29 +251,31 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
           const textFill = isActive ? "#0A0A0A" : "#FFFFFF";
           return (
             <Marker key={iso} coordinates={coords}>
-              <circle
-                r={11}
-                fill={circleFill}
-                stroke={circleStroke}
-                strokeWidth={1.5}
-                onClick={() => onCountryClick(iso, COUNTRY_NAMES[iso] ?? iso)}
-                style={{ pointerEvents: "auto", cursor: "pointer" }}
-              />
-              <text
-                textAnchor="middle"
-                y={4}
-                onClick={() => onCountryClick(iso, COUNTRY_NAMES[iso] ?? iso)}
-                style={{
-                  fontFamily: "DM Mono, monospace",
-                  fontSize: 9,
-                  fill: textFill,
-                  pointerEvents: "auto",
-                  userSelect: "none",
-                  cursor: "pointer",
-                }}
-              >
-                {data.employees}
-              </text>
+              <g style={{ transform: `scale(${markerScale})`, transformBox: "fill-box", transformOrigin: "center" }}>
+                <circle
+                  r={11}
+                  fill={circleFill}
+                  stroke={circleStroke}
+                  strokeWidth={1.5}
+                  onClick={() => onCountryClick(iso, COUNTRY_NAMES[iso] ?? iso)}
+                  style={{ pointerEvents: "auto", cursor: "pointer" }}
+                />
+                <text
+                  textAnchor="middle"
+                  y={4}
+                  onClick={() => onCountryClick(iso, COUNTRY_NAMES[iso] ?? iso)}
+                  style={{
+                    fontFamily: "DM Mono, monospace",
+                    fontSize: 9,
+                    fill: textFill,
+                    pointerEvents: "auto",
+                    userSelect: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  {data.employees}
+                </text>
+              </g>
             </Marker>
           );
         })}
