@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { ComposableMap, Geographies, Geography, Marker } from "react-simple-maps";
+import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from "react-simple-maps";
 import { EntityType, PresenceData } from "@/types";
 
 const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
@@ -85,8 +85,10 @@ function getCountryName(geo: { properties?: { name?: string } }): string {
   return geo.properties?.name ?? "";
 }
 
-const ZOOM_LEVEL = 3;
-const ZOOM_DURATION = 600; // ms
+const COUNTRY_ZOOM = 6;          // zoom level when a country is clicked
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 20;
+const ZOOM_DURATION = 600;       // ms
 const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
 export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpen }: WorldMapProps) {
@@ -95,41 +97,41 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
   const containerRef = useRef<HTMLDivElement>(null);
   const [dims, setDims] = useState({ width: 800, height: 500 });
 
-  // Animated camera: center [lon,lat] + zoom multiplier (1 = world view)
-  const [camera, setCamera] = useState<{ center: [number, number]; zoom: number }>({
-    center: [0, 15],
+  // Live camera state — driven by ZoomableGroup (wheel/pinch/drag) AND by click-animation
+  const [position, setPosition] = useState<{ coordinates: [number, number]; zoom: number }>({
+    coordinates: [0, 15],
     zoom: 1,
   });
   const animRef = useRef<number | null>(null);
 
-  const animateCamera = useCallback(
-    (target: { center: [number, number]; zoom: number }) => {
-      if (animRef.current) cancelAnimationFrame(animRef.current);
-      const start = performance.now();
-      const from = camera;
+  const animateTo = useCallback((target: { coordinates: [number, number]; zoom: number }) => {
+    if (animRef.current) cancelAnimationFrame(animRef.current);
+    const start = performance.now();
+    setPosition((from) => {
+      const fromSnapshot = from;
       const step = (now: number) => {
         const t = Math.min(1, (now - start) / ZOOM_DURATION);
         const k = easeInOutCubic(t);
-        setCamera({
-          center: [
-            from.center[0] + (target.center[0] - from.center[0]) * k,
-            from.center[1] + (target.center[1] - from.center[1]) * k,
+        setPosition({
+          coordinates: [
+            fromSnapshot.coordinates[0] + (target.coordinates[0] - fromSnapshot.coordinates[0]) * k,
+            fromSnapshot.coordinates[1] + (target.coordinates[1] - fromSnapshot.coordinates[1]) * k,
           ],
-          zoom: from.zoom + (target.zoom - from.zoom) * k,
+          zoom: fromSnapshot.zoom + (target.zoom - fromSnapshot.zoom) * k,
         });
         if (t < 1) animRef.current = requestAnimationFrame(step);
       };
       animRef.current = requestAnimationFrame(step);
-    },
-    [camera],
-  );
+      return fromSnapshot;
+    });
+  }, []);
 
-  // Animate to active country / reset to world when cleared
+  // Zoom-to-country on click; reset to world when cleared
   useEffect(() => {
     if (activeCountry && CENTROIDS[activeCountry]) {
-      animateCamera({ center: CENTROIDS[activeCountry], zoom: ZOOM_LEVEL });
+      animateTo({ coordinates: CENTROIDS[activeCountry], zoom: COUNTRY_ZOOM });
     } else {
-      animateCamera({ center: [0, 15], zoom: 1 });
+      animateTo({ coordinates: [0, 15], zoom: 1 });
     }
     return () => {
       if (animRef.current) cancelAnimationFrame(animRef.current);
@@ -180,11 +182,10 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
     return "#C8C5BE";
   };
 
-  // Base scale fills container; multiply by camera.zoom for zoom-in effect
+  // Base scale fills the container width
   const baseScale = (dims.width - (panelOpen ? 340 : 0)) / 5.5;
-  const scale = baseScale * camera.zoom;
-  // Markers/strokes are in projected space — counter-scale so they stay visually constant
-  const markerScale = 1 / camera.zoom;
+  // Counter-scale so circles + strokes stay visually constant at any zoom (wheel, pinch, click)
+  const inv = 1 / position.zoom;
 
   return (
     <div
@@ -196,89 +197,98 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
       <ComposableMap
         width={dims.width - (panelOpen ? 340 : 0)}
         height={dims.height}
-        projectionConfig={{ scale, center: camera.center }}
+        projectionConfig={{ scale: baseScale, center: [0, 15] }}
         style={{ width: "100%", height: "100%", display: "block" }}
       >
-        <Geographies geography={GEO_URL}>
-          {({ geographies }) =>
-            geographies.map((geo) => {
-              const iso = getAlpha2(geo);
-              const name = getCountryName(geo);
-              return (
-                <Geography
-                  key={geo.rsmKey}
-                  geography={geo}
-                  onClick={() => iso && onCountryClick(iso, name)}
-                  onMouseEnter={(e) => iso && handleMouseEnter(e, iso, name)}
-                  onMouseLeave={handleMouseLeave}
-                  style={{
-                    default: {
-                      fill: getFill(iso),
-                      stroke: getStroke(iso),
-                      strokeWidth: 0.4 * markerScale,
-                      outline: "none",
-                      cursor: iso ? "pointer" : "default",
-                      transition: "fill 120ms ease",
-                    },
-                    hover: {
-                      fill: iso === activeCountry ? "#0A0A0A" : "#C8C5BE",
-                      stroke: getStroke(iso),
-                      strokeWidth: 0.5 * markerScale,
-                      outline: "none",
-                      cursor: iso ? "pointer" : "default",
-                    },
-                    pressed: {
-                      fill: "#0A0A0A",
-                      stroke: "#0A0A0A",
-                      strokeWidth: 0.5 * markerScale,
-                      outline: "none",
-                    },
-                  }}
-                />
-              );
-            })
-          }
-        </Geographies>
+        <ZoomableGroup
+          center={position.coordinates}
+          zoom={position.zoom}
+          minZoom={MIN_ZOOM}
+          maxZoom={MAX_ZOOM}
+          onMoveEnd={(pos) => setPosition(pos)}
+          onMove={(pos) => setPosition(pos)}
+        >
+          <Geographies geography={GEO_URL}>
+            {({ geographies }) =>
+              geographies.map((geo) => {
+                const iso = getAlpha2(geo);
+                const name = getCountryName(geo);
+                return (
+                  <Geography
+                    key={geo.rsmKey}
+                    geography={geo}
+                    onClick={() => iso && onCountryClick(iso, name)}
+                    onMouseEnter={(e) => iso && handleMouseEnter(e, iso, name)}
+                    onMouseLeave={handleMouseLeave}
+                    style={{
+                      default: {
+                        fill: getFill(iso),
+                        stroke: getStroke(iso),
+                        strokeWidth: 0.4 * inv,
+                        outline: "none",
+                        cursor: iso ? "pointer" : "default",
+                        transition: "fill 120ms ease",
+                      },
+                      hover: {
+                        fill: iso === activeCountry ? "#0A0A0A" : "#C8C5BE",
+                        stroke: getStroke(iso),
+                        strokeWidth: 0.5 * inv,
+                        outline: "none",
+                        cursor: iso ? "pointer" : "default",
+                      },
+                      pressed: {
+                        fill: "#0A0A0A",
+                        stroke: "#0A0A0A",
+                        strokeWidth: 0.5 * inv,
+                        outline: "none",
+                      },
+                    }}
+                  />
+                );
+              })
+            }
+          </Geographies>
 
-        {/* Employee presence markers */}
-        {Object.entries(presenceData).map(([iso, data]) => {
-          const coords = CENTROIDS[iso];
-          if (!coords) return null;
-          const isActive = iso === activeCountry;
-          const isHq = data.entityType === "hq";
-          const circleFill = isActive ? "#FFFFFF" : isHq ? "#C9A227" : "#0A0A0A";
-          const circleStroke = isActive ? "#0A0A0A" : "none";
-          const textFill = isActive ? "#0A0A0A" : "#FFFFFF";
-          return (
-            <Marker key={iso} coordinates={coords}>
-              <g style={{ transform: `scale(${markerScale})`, transformBox: "fill-box", transformOrigin: "center" }}>
-                <circle
-                  r={11}
-                  fill={circleFill}
-                  stroke={circleStroke}
-                  strokeWidth={1.5}
-                  onClick={() => onCountryClick(iso, COUNTRY_NAMES[iso] ?? iso)}
-                  style={{ pointerEvents: "auto", cursor: "pointer" }}
-                />
-                <text
-                  textAnchor="middle"
-                  y={4}
-                  onClick={() => onCountryClick(iso, COUNTRY_NAMES[iso] ?? iso)}
-                  style={{
-                    fontFamily: "DM Mono, monospace",
-                    fontSize: 9,
-                    fill: textFill,
-                    pointerEvents: "auto",
-                    userSelect: "none",
-                    cursor: "pointer",
-                  }}
-                >
-                  {data.employees}
-                </text>
-              </g>
-            </Marker>
-          );
-        })}
+          {/* Employee presence markers — counter-scaled so size adapts to zoom */}
+          {Object.entries(presenceData).map(([iso, data]) => {
+            const coords = CENTROIDS[iso];
+            if (!coords) return null;
+            const isActive = iso === activeCountry;
+            const isHq = data.entityType === "hq";
+            const circleFill = isActive ? "#FFFFFF" : isHq ? "#C9A227" : "#0A0A0A";
+            const circleStroke = isActive ? "#0A0A0A" : "none";
+            const textFill = isActive ? "#0A0A0A" : "#FFFFFF";
+            return (
+              <Marker key={iso} coordinates={coords}>
+                <g transform={`scale(${inv})`}>
+                  <circle
+                    r={11}
+                    fill={circleFill}
+                    stroke={circleStroke}
+                    strokeWidth={1.5}
+                    onClick={() => onCountryClick(iso, COUNTRY_NAMES[iso] ?? iso)}
+                    style={{ pointerEvents: "auto", cursor: "pointer" }}
+                  />
+                  <text
+                    textAnchor="middle"
+                    y={4}
+                    onClick={() => onCountryClick(iso, COUNTRY_NAMES[iso] ?? iso)}
+                    style={{
+                      fontFamily: "DM Mono, monospace",
+                      fontSize: 9,
+                      fill: textFill,
+                      pointerEvents: "auto",
+                      userSelect: "none",
+                      cursor: "pointer",
+                    }}
+                  >
+                    {data.employees}
+                  </text>
+                </g>
+              </Marker>
+            );
+          })}
+        </ZoomableGroup>
       </ComposableMap>
 
       {/* Tooltip */}
