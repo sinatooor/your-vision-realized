@@ -8,18 +8,44 @@ import {
   AlignmentType,
   BorderStyle,
   LevelFormat,
+  ImageRun,
 } from "docx";
 import { saveAs } from "file-saver";
+import type { MemoSignOff } from "@/lib/memoChat";
 
 const FIRM_NAME = "JurisdictIQ";
 const FIRM_TAGLINE = "Cross-Border Legal Intelligence";
+
+export interface MemoExportPayload {
+  executiveSummary: string;
+  memoMarkdown: string;
+  signOff?: MemoSignOff | null;
+}
 
 function dateStamp() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function formatSignedDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
 function fileBase() {
   return `${FIRM_NAME}-Advisory-Memo-${dateStamp()}`;
+}
+
+function dataUrlToUint8Array(dataUrl: string): { bytes: Uint8Array; type: "png" | "jpg" } | null {
+  const m = /^data:image\/(png|jpeg|jpg);base64,(.+)$/i.exec(dataUrl);
+  if (!m) return null;
+  const type = m[1].toLowerCase() === "png" ? "png" : "jpg";
+  const binary = atob(m[2]);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return { bytes, type };
 }
 
 /* ---------------- Markdown parsing (lightweight) ---------------- */
