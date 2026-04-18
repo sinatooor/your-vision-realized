@@ -77,8 +77,8 @@ export async function runPipeline(
     session.status = "running";
     const confirmedTwin = session.twin!;
 
-    // Agent 2 — Scout (parallel jurisdiction retrieval)
-    const obligations = await scoutJurisdictions(confirmedTwin, stream);
+    // Agent 2 — Scout (parallel jurisdiction retrieval + news)
+    const { obligations, recentDevelopments } = await scoutJurisdictions(confirmedTwin, stream);
 
     // Agent 3 — Conflict Engine (deterministic)
     const conflicts = await detectConflicts(confirmedTwin, obligations, stream);
@@ -98,6 +98,7 @@ export async function runPipeline(
       scenarios,
       actions,
       stream,
+      recentDevelopments,
     );
 
     const result: AnalysisResult = {
@@ -111,6 +112,7 @@ export async function runPipeline(
       recommendedScenario: recommended.model,
       executiveSummary,
       memoMarkdown,
+      recentDevelopments,
     };
 
     session.result = result;
