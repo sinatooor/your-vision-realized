@@ -232,15 +232,29 @@ function writeLocal(key: string, value: unknown) {
 
 // ── Context ───────────────────────────────────────────────────────────────────
 
+export interface CustomCompany {
+  id: string; // "custom:<uuid>"
+  label: string;
+  tagline: string;
+  company: CompanyProfile;
+  footprint: FootprintEntry[];
+  dataArch: DataArchitecture;
+}
+
+export type ActiveProfileId = PresetId | string | null;
+
 interface CompanyContextValue {
   company: CompanyProfile;
   footprint: FootprintEntry[];
   dataArch: DataArchitecture;
-  activePreset: PresetId | null;
+  activePreset: ActiveProfileId;
+  customCompanies: CustomCompany[];
   setCompany: (updater: CompanyProfile | ((prev: CompanyProfile) => CompanyProfile)) => void;
   setFootprint: (updater: FootprintEntry[] | ((prev: FootprintEntry[]) => FootprintEntry[])) => void;
   setDataArch: (updater: DataArchitecture | ((prev: DataArchitecture) => DataArchitecture)) => void;
   loadPreset: (id: PresetId) => void;
+  loadCustom: (id: string) => void;
+  addCustomCompany: (name: string) => string;
 }
 
 const CompanyContext = createContext<CompanyContextValue | null>(null);
