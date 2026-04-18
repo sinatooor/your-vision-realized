@@ -178,6 +178,22 @@ export interface Action {
   blocking: boolean;
 }
 
+export interface NewsCitation {
+  title: string;
+  url: string;
+}
+
+export interface RecentDevelopment {
+  countryIso: string;
+  countryName: string;
+  isLive: boolean;
+  summary: string;
+  highlights: string[];
+  citations: NewsCitation[];
+  retrievedAt: string;
+  reason?: string;
+}
+
 export interface AnalysisResult {
   id: string;
   twinId: string;
@@ -189,6 +205,7 @@ export interface AnalysisResult {
   recommendedScenario: ScenarioModel;
   executiveSummary: string;
   memoMarkdown: string;
+  recentDevelopments?: RecentDevelopment[];
 }
 
 export type AgentEventType =
