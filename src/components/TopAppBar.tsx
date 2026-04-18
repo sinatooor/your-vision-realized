@@ -136,6 +136,7 @@ export const TopAppBar = ({
           <MaterialIcon name="settings" className="text-[18px]" />
           <span className="hidden sm:inline">Settings</span>
         </button>
+        <ProfileMenu />
       </div>
 
       <div className="absolute bottom-0 left-0 bg-surface-container h-px w-full" />
