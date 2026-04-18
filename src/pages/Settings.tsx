@@ -1,9 +1,12 @@
 import { Link } from "react-router-dom";
 import { useAnalysis } from "@/contexts/AnalysisContext";
+import { useCompany, COMPANY_PRESETS } from "@/contexts/CompanyContext";
+import type { PresetId } from "@/contexts/CompanyContext";
 import { MaterialIcon } from "@/components/MaterialIcon";
 
 export default function Settings() {
   const { result, resetAnalysis } = useAnalysis();
+  const { activePreset, loadPreset, company } = useCompany();
 
   return (
     <main
@@ -17,6 +20,102 @@ export default function Settings() {
             Configure your JurisdictIQ workspace and analysis preferences.
           </p>
         </div>
+
+        {/* Client Profile */}
+        <section id="settings-client" className="mb-10 scroll-mt-24">
+          <p className="font-mono text-[9px] tracking-widest uppercase text-outline mb-1">
+            Active Client Profile
+          </p>
+          <p className="font-body text-sm text-on-surface-variant mb-4">
+            {activePreset
+              ? `Loaded preset · ${company.name}`
+              : `Custom profile · ${company.name}`}
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {(Object.keys(COMPANY_PRESETS) as PresetId[]).map((id) => {
+              const preset = COMPANY_PRESETS[id];
+              const isActive = activePreset === id;
+              const totalHC = preset.footprint.reduce((s, r) => s + r.headcount, 0);
+              const locations = preset.footprint.map((r) => r.iso).slice(0, 5);
+              const extra = preset.footprint.length > 5 ? preset.footprint.length - 5 : 0;
+
+              return (
+                <button
+                  key={id}
+                  onClick={() => loadPreset(id)}
+                  className={`text-left border p-4 transition-colors w-full ${
+                    isActive
+                      ? "border-primary bg-surface-container"
+                      : "border-outline-variant hover:border-primary/50 hover:bg-surface-container/50"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div>
+                      <p className="font-headline text-base font-bold text-primary leading-tight">
+                        {preset.label}
+                      </p>
+                      <p className="font-mono text-[9px] tracking-widest uppercase text-outline mt-0.5">
+                        {preset.tagline}
+                      </p>
+                    </div>
+                    {isActive && (
+                      <span className="font-mono text-[9px] tracking-widest uppercase border border-primary text-primary px-2 py-0.5 shrink-0">
+                        Active
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-4 mt-3">
+                    <div>
+                      <p className="font-mono text-[9px] tracking-widest uppercase text-outline mb-0.5">
+                        Employees
+                      </p>
+                      <p className="font-body text-sm font-medium text-primary">
+                        {totalHC.toLocaleString()}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="font-mono text-[9px] tracking-widest uppercase text-outline mb-0.5">
+                        Revenue
+                      </p>
+                      <p className="font-body text-sm font-medium text-primary">
+                        {preset.company.revenue}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 mt-3 flex-wrap">
+                    {locations.map((iso) => (
+                      <span
+                        key={iso}
+                        className="font-mono text-[9px] tracking-widest uppercase border border-outline-variant text-outline px-1.5 py-0.5"
+                      >
+                        {iso}
+                      </span>
+                    ))}
+                    {extra > 0 && (
+                      <span className="font-mono text-[9px] tracking-widest uppercase text-outline">
+                        +{extra} more
+                      </span>
+                    )}
+                  </div>
+
+                  {preset.company.hasAiFeatures && (
+                    <p className="font-mono text-[9px] tracking-widest uppercase text-medium mt-2">
+                      AI Act obligations apply
+                    </p>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          <p className="font-mono text-[9px] tracking-widest uppercase text-outline mt-3">
+            Selecting a preset replaces the current profile — individual fields remain
+            editable on the overview page.
+          </p>
+        </section>
 
         {/* Analysis Session */}
         <section id="settings-session" className="mb-8 scroll-mt-24">

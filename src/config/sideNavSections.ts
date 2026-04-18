@@ -9,9 +9,9 @@ export const SIDE_NAV_SECTIONS: Record<string, { title: string; sections: SideNa
     title: "Overview",
     sections: [
       { id: "region-select", icon: "public", label: "Region Select" },
-      { id: "regulatory-scope", icon: "gavel", label: "Regulatory Scope" },
-      { id: "tax-exposure", icon: "payments", label: "Tax Exposure" },
-      { id: "entity-structure", icon: "account_tree", label: "Entity Structure" },
+      { id: "company-profile", icon: "business", label: "Company Profile" },
+      { id: "international-footprint", icon: "language", label: "Int'l Footprint" },
+      { id: "data-architecture", icon: "storage", label: "Data Architecture" },
     ],
   },
   "/conflicts": {
@@ -52,6 +52,7 @@ export const SIDE_NAV_SECTIONS: Record<string, { title: string; sections: SideNa
   "/settings": {
     title: "Settings",
     sections: [
+      { id: "settings-client", icon: "business", label: "Client Profile" },
       { id: "settings-session", icon: "analytics", label: "Session" },
       { id: "settings-defaults", icon: "tune", label: "Defaults" },
       { id: "settings-status", icon: "monitoring", label: "System Status" },

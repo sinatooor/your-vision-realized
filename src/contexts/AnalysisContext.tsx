@@ -1,49 +1,48 @@
-import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, ReactNode } from "react";
 import { useAgentStream, startAnalysis, fetchResult, fetchTwin, confirmTwin } from "@/lib/useAgentStream";
 import { AnalysisParams, AnalysisResult, EntityType, ExpansionTwin, PresenceData, AgentEvent } from "@/types";
+import { useCompany } from "@/contexts/CompanyContext";
+import type { CompanyProfile, FootprintEntry, DataArchitecture } from "@/contexts/CompanyContext";
 
-const INITIAL_PRESENCE: Record<string, PresenceData> = {
-  SE: { employees: 185, entityType: "hq" as EntityType },
-  DE: { employees: 48, entityType: "eor" as EntityType },
-  SG: { employees: 12, entityType: "contractor" as EntityType },
-  GB: { employees: 34, entityType: "eor" as EntityType },
-};
+function mapEntityType(label: string): EntityType {
+  const s = label.toLowerCase();
+  if (s.includes("headquarter") || s === "hq") return "hq";
+  if (s.includes("employer of record") || s.includes("eor")) return "eor";
+  if (s.includes("contractor")) return "contractor";
+  if (s.includes("branch")) return "branch";
+  if (s.includes("subsidiary")) return "subsidiary";
+  if (s.includes("representative")) return "representative";
+  return "eor";
+}
 
-const COMPANY_NAME = "NordHR Technologies AB";
-const GLOBAL_HEADCOUNT = Object.values(INITIAL_PRESENCE).reduce((sum, p) => sum + p.employees, 0);
-
-const INDUSTRY_LABELS: Record<string, string> = {
-  "hr-saas": "HR / HCM SaaS",
-  fintech: "Fintech / Payments",
-  biomedical: "Biomedical / Pharma",
-  manufacturing: "Manufacturing",
-  "e-commerce": "E-Commerce / Retail",
-  logistics: "Logistics / Supply Chain",
-  legaltech: "LegalTech",
-  other: "Technology",
-};
-
-const REVENUE_LABELS: Record<string, string> = {
-  "under-1m": "under €1 M",
-  "1m-10m": "€1 M – €10 M",
-  "10m-100m": "€10 M – €100 M",
-  "over-100m": "over €100 M",
-};
-
-function buildBrief(country: string, countryName: string, params: AnalysisParams): string {
+function buildBrief(
+  country: string,
+  countryName: string,
+  params: AnalysisParams,
+  company: CompanyProfile,
+  footprint: FootprintEntry[],
+  dataArch: DataArchitecture,
+): string {
+  const hqIso = company.hqCountry.match(/\(([A-Z]+)\)/)?.[1] ?? "SE";
+  const globalHeadcount = footprint.reduce((s, r) => s + r.headcount, 0);
+  const currentPresence = footprint
+    .filter((r) => r.iso !== hqIso)
+    .map((r) => `${r.iso}: ${r.headcount} (${mapEntityType(r.entityType)})`)
+    .join(", ");
   const dataDesc =
     params.dataType === "hr-only"
       ? "HR data (employee records, payroll, performance data)"
       : params.dataType === "personal"
       ? "personal and customer data"
       : "no personal data";
-  const currentPresence = Object.entries(INITIAL_PRESENCE)
-    .filter(([iso]) => iso !== "SE")
-    .map(([iso, p]) => `${iso}: ${p.employees} (${p.entityType})`)
-    .join(", ");
-  const industryLabel = INDUSTRY_LABELS[params.industry] ?? "Technology";
-  const aiNote = params.hasAiFeatures ? " Their product includes AI/ML features subject to AI Act obligations." : "";
-  return `${COMPANY_NAME} is a ${industryLabel} company headquartered in Sweden (SE) with approximately ${GLOBAL_HEADCOUNT} employees globally and annual revenue of ${REVENUE_LABELS[params.revenueEur] ?? "undisclosed"}. They are expanding to ${countryName} (${country}) and plan to hire ${params.targetHeadcount} employees on a ${params.arrangement} basis using ${params.entityStructure} structure. They process ${dataDesc}. Their data architecture is centralised in Sweden. Target launch: ${params.startDate || "Q2 2025"}. Current international presence — ${currentPresence}.${aiNote}`;
+  const aiNote =
+    company.hasAiFeatures || params.hasAiFeatures
+      ? " Their product includes AI/ML features subject to AI Act obligations."
+      : "";
+  const storageNote = dataArch.centralized
+    ? `centralised in ${dataArch.storageJurisdiction}`
+    : `distributed across ${dataArch.storageJurisdiction}`;
+  return `${company.name} is a ${company.industry} company headquartered in ${company.hqCountry} with approximately ${globalHeadcount} employees globally and annual revenue of ${company.revenue}. They are expanding to ${countryName} (${country}) and plan to hire ${params.targetHeadcount} employees on a ${params.arrangement} basis using ${params.entityStructure} structure. They process ${dataDesc}. Their data architecture is ${storageNote}. Target launch: ${params.startDate || "Q2 2025"}. Current international presence — ${currentPresence}.${aiNote}`;
 }
 
 interface AnalysisContextValue {
@@ -72,6 +71,16 @@ interface AnalysisContextValue {
 const AnalysisContext = createContext<AnalysisContextValue | null>(null);
 
 export function AnalysisProvider({ children }: { children: ReactNode }) {
+  const { company, footprint, dataArch } = useCompany();
+
+  const presenceData = useMemo<Record<string, PresenceData>>(() => {
+    const map: Record<string, PresenceData> = {};
+    for (const row of footprint) {
+      map[row.iso] = { employees: row.headcount, entityType: mapEntityType(row.entityType) };
+    }
+    return map;
+  }, [footprint]);
+
   const [activeCountry, setActiveCountry] = useState<{ iso: string; name: string } | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -79,7 +88,6 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
   const [twin, setTwin] = useState<ExpansionTwin | null>(null);
   const [showTwinReview, setShowTwinReview] = useState(false);
   const [hasNavigatedToResults, setHasNavigatedToResults] = useState(false);
-  const [presenceData] = useState(INITIAL_PRESENCE);
 
   const markNavigatedToResults = useCallback(() => setHasNavigatedToResults(true), []);
 
@@ -104,7 +112,7 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
       setShowTwinReview(false);
       setHasNavigatedToResults(false);
       try {
-        const brief = buildBrief(activeCountry.iso, activeCountry.name, params);
+        const brief = buildBrief(activeCountry.iso, activeCountry.name, params, company, footprint, dataArch);
         const sid = await startAnalysis(brief);
         setSessionId(sid);
         startStream(sid);
@@ -112,7 +120,7 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
         console.error("Failed to start analysis:", err);
       }
     },
-    [activeCountry, resetStream, startStream],
+    [activeCountry, resetStream, startStream, company, footprint, dataArch],
   );
 
   useEffect(() => {

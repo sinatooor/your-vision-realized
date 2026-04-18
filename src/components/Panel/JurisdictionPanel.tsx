@@ -238,7 +238,7 @@ export function JurisdictionPanel({ country, presence, onClose, onRunAnalysis, i
                 className={`w-10 h-5 rounded-full transition-colors relative ${hasAiFeatures ? "bg-primary" : "bg-outline-variant"}`}
               >
                 <span
-                  className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${hasAiFeatures ? "translate-x-5" : "translate-x-0.5"}`}
+                  className={`absolute top-0.5 left-0 w-4 h-4 rounded-full bg-white shadow transition-transform ${hasAiFeatures ? "translate-x-5" : "translate-x-0.5"}`}
                 />
               </button>
             </div>
