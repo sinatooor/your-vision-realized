@@ -169,22 +169,41 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
     return () => ro.disconnect();
   }, []);
 
-  // Disable wheel/trackpad-scroll zoom — only pinch gestures should zoom.
-  // On macOS trackpads, real pinch gestures fire wheel events with `ctrlKey === true`
-  // (synthetic), while two-finger scroll fires wheel events with `ctrlKey === false`.
-  // We block the latter from reaching ZoomableGroup so scrolling does nothing on the map.
+  // Wheel handling:
+  // - Pinch gesture (macOS trackpad) → wheel event with ctrlKey === true → let ZoomableGroup zoom.
+  // - Regular scroll (two-finger swipe / mouse wheel) → ctrlKey === false → block ZoomableGroup
+  //   AND forward the scroll to the nearest scrollable ancestor so the page scrolls normally.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const onWheel = (e: WheelEvent) => {
-      if (!e.ctrlKey) {
-        // Two-finger scroll / mouse wheel — stop ZoomableGroup from handling it.
-        e.stopPropagation();
-        e.preventDefault();
+
+    const findScrollParent = (node: HTMLElement | null): HTMLElement | Window => {
+      let n: HTMLElement | null = node?.parentElement ?? null;
+      while (n) {
+        const style = getComputedStyle(n);
+        const oy = style.overflowY;
+        if ((oy === "auto" || oy === "scroll") && n.scrollHeight > n.clientHeight) {
+          return n;
+        }
+        n = n.parentElement;
       }
-      // ctrlKey === true means a pinch gesture — let it through to zoom.
+      return window;
     };
-    // capture: true so we intercept BEFORE ZoomableGroup's listener runs
+
+    const onWheel = (e: WheelEvent) => {
+      if (e.ctrlKey) return; // pinch — allow zoom
+      // Block ZoomableGroup from reacting to plain scroll
+      e.stopPropagation();
+      e.preventDefault();
+      // Forward the scroll delta to the page
+      const target = findScrollParent(el);
+      if (target === window) {
+        window.scrollBy({ top: e.deltaY, left: e.deltaX, behavior: "auto" });
+      } else {
+        (target as HTMLElement).scrollTop += e.deltaY;
+        (target as HTMLElement).scrollLeft += e.deltaX;
+      }
+    };
     el.addEventListener("wheel", onWheel, { capture: true, passive: false });
     return () => el.removeEventListener("wheel", onWheel, { capture: true } as EventListenerOptions);
   }, []);
