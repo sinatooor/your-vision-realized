@@ -1,4 +1,10 @@
 import ReactMarkdown from "react-markdown";
+import { useState } from "react";
+import {
+  exportMemoAsDocx,
+  exportMemoAsMarkdown,
+  exportMemoAsPdf,
+} from "@/lib/memoExporters";
 
 interface MemoExportProps {
   memo: { executiveSummary: string; memoMarkdown: string };
@@ -26,19 +32,37 @@ const summaryComponents = {
 };
 
 export function MemoExport({ memo }: MemoExportProps) {
-  const handleDownload = () => {
-    const blob = new Blob([memo.memoMarkdown], { type: "text/markdown" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `JurisdictIQ-Advisory-Memo-${new Date().toISOString().slice(0, 10)}.md`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const [busy, setBusy] = useState<null | "pdf" | "docx" | "md">(null);
+
+  const handleMarkdown = () => {
+    setBusy("md");
+    try {
+      exportMemoAsMarkdown(memo);
+    } finally {
+      setBusy(null);
+    }
   };
 
-  const handleExportPdf = () => {
-    window.print();
+  const handlePdf = () => {
+    setBusy("pdf");
+    try {
+      exportMemoAsPdf(memo);
+    } finally {
+      setBusy(null);
+    }
   };
+
+  const handleDocx = async () => {
+    setBusy("docx");
+    try {
+      await exportMemoAsDocx(memo);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const btnClass =
+    "font-mono text-[10px] tracking-widest uppercase border border-primary text-primary px-5 py-2.5 hover:bg-primary hover:text-primary-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
 
   return (
     <div className="memo-export-root">
@@ -53,18 +77,15 @@ export function MemoExport({ memo }: MemoExportProps) {
       </div>
 
       {/* Export buttons */}
-      <div className="flex gap-3 mb-8 print:hidden">
-        <button
-          onClick={handleDownload}
-          className="font-mono text-[10px] tracking-widest uppercase border border-primary text-primary px-5 py-2.5 hover:bg-primary hover:text-primary-foreground transition-colors"
-        >
-          EXPORT AS MARKDOWN ↓
+      <div className="flex flex-wrap gap-3 mb-8 print:hidden">
+        <button onClick={handlePdf} disabled={busy !== null} className={btnClass}>
+          {busy === "pdf" ? "EXPORTING…" : "EXPORT AS PDF ↓"}
         </button>
-        <button
-          onClick={handleExportPdf}
-          className="font-mono text-[10px] tracking-widest uppercase border border-primary text-primary px-5 py-2.5 hover:bg-primary hover:text-primary-foreground transition-colors"
-        >
-          EXPORT AS PDF ↓
+        <button onClick={handleDocx} disabled={busy !== null} className={btnClass}>
+          {busy === "docx" ? "EXPORTING…" : "EXPORT AS DOCX ↓"}
+        </button>
+        <button onClick={handleMarkdown} disabled={busy !== null} className={btnClass}>
+          {busy === "md" ? "EXPORTING…" : "EXPORT AS MARKDOWN ↓"}
         </button>
       </div>
 
