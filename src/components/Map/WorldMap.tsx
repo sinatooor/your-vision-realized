@@ -180,8 +180,11 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
     return "#C8C5BE";
   };
 
-  // Scale fills the container width; center[1]=15 keeps the inhabited world centred vertically
-  const scale = (dims.width - (panelOpen ? 340 : 0)) / 5.5;
+  // Base scale fills container; multiply by camera.zoom for zoom-in effect
+  const baseScale = (dims.width - (panelOpen ? 340 : 0)) / 5.5;
+  const scale = baseScale * camera.zoom;
+  // Markers/strokes are in projected space — counter-scale so they stay visually constant
+  const markerScale = 1 / camera.zoom;
 
   return (
     <div
@@ -193,7 +196,7 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
       <ComposableMap
         width={dims.width - (panelOpen ? 340 : 0)}
         height={dims.height}
-        projectionConfig={{ scale, center: [0, 15] }}
+        projectionConfig={{ scale, center: camera.center }}
         style={{ width: "100%", height: "100%", display: "block" }}
       >
         <Geographies geography={GEO_URL}>
