@@ -69,18 +69,20 @@ export default function Memo() {
 
   return (
     <main
-      className="flex-1 pt-[89px] pb-8 flex"
+      className="flex-1 pt-[89px] pb-8 flex min-h-0"
       style={{ height: "calc(100vh - 32px)" }}
     >
       {/* Chat pane — hidden in print */}
       {sessionId && (
-        <div className="w-[420px] flex-shrink-0 print:hidden">
-          <MemoChat
-            sessionId={sessionId}
-            onMemoUpdate={(markdown, summary) =>
-              updateMemo({ memoMarkdown: markdown, executiveSummary: summary })
-            }
-          />
+        <div className="w-[380px] flex-shrink-0 h-full p-4 print:hidden">
+          <div className="h-full border border-outline-variant bg-surface shadow-sm overflow-hidden flex flex-col">
+            <MemoChat
+              sessionId={sessionId}
+              onMemoUpdate={(markdown, summary) =>
+                updateMemo({ memoMarkdown: markdown, executiveSummary: summary })
+              }
+            />
+          </div>
         </div>
       )}
 
