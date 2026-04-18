@@ -1,4 +1,4 @@
-import { NavLink, Link } from "react-router-dom";
+import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
 import { MaterialIcon } from "@/components/MaterialIcon";
 
 interface NavItem {
@@ -21,6 +21,19 @@ export const TopAppBar = ({
   conflictCount,
   actionCount,
 }: TopAppBarProps) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const settingsActive = location.pathname === "/settings";
+
+  const handleSettingsClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (settingsActive) {
+      navigate(-1);
+    } else {
+      navigate("/settings");
+    }
+  };
+
   const navItems: NavItem[] = [
     { to: "/", label: "Overview", end: true },
     { to: "/conflicts", label: "Conflicts", count: conflictCount },
@@ -110,18 +123,18 @@ export const TopAppBar = ({
           <MaterialIcon name="help_outline" className="text-[18px]" />
           <span className="hidden sm:inline">Help</span>
         </NavLink>
-        <NavLink
-          to="/settings"
-          className={({ isActive }) =>
-            `flex items-center gap-1.5 font-mono text-[10px] tracking-widest uppercase transition-colors px-3 py-2 ${
-              isActive ? "text-primary" : "text-outline hover:text-primary"
-            }`
-          }
+        <button
+          type="button"
+          onClick={handleSettingsClick}
+          className={`flex items-center gap-1.5 font-mono text-[10px] tracking-widest uppercase transition-colors px-3 py-2 ${
+            settingsActive ? "text-primary" : "text-outline hover:text-primary"
+          }`}
           aria-label="Settings"
+          aria-pressed={settingsActive}
         >
           <MaterialIcon name="settings" className="text-[18px]" />
           <span className="hidden sm:inline">Settings</span>
-        </NavLink>
+        </button>
       </div>
 
       <div className="absolute bottom-0 left-0 bg-surface-container h-px w-full" />
