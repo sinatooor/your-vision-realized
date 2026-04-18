@@ -123,18 +123,18 @@ export const TopAppBar = ({
           <MaterialIcon name="help_outline" className="text-[18px]" />
           <span className="hidden sm:inline">Help</span>
         </NavLink>
-        <NavLink
-          to="/settings"
-          className={({ isActive }) =>
-            `flex items-center gap-1.5 font-mono text-[10px] tracking-widest uppercase transition-colors px-3 py-2 ${
-              isActive ? "text-primary" : "text-outline hover:text-primary"
-            }`
-          }
+        <button
+          type="button"
+          onClick={handleSettingsClick}
+          className={`flex items-center gap-1.5 font-mono text-[10px] tracking-widest uppercase transition-colors px-3 py-2 ${
+            settingsActive ? "text-primary" : "text-outline hover:text-primary"
+          }`}
           aria-label="Settings"
+          aria-pressed={settingsActive}
         >
           <MaterialIcon name="settings" className="text-[18px]" />
           <span className="hidden sm:inline">Settings</span>
-        </NavLink>
+        </button>
       </div>
 
       <div className="absolute bottom-0 left-0 bg-surface-container h-px w-full" />
