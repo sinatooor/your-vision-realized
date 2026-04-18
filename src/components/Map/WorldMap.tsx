@@ -85,11 +85,57 @@ function getCountryName(geo: { properties?: { name?: string } }): string {
   return geo.properties?.name ?? "";
 }
 
+const ZOOM_LEVEL = 3;
+const ZOOM_DURATION = 600; // ms
+const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+
 export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpen }: WorldMapProps) {
   const [hovered, setHovered] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dims, setDims] = useState({ width: 800, height: 500 });
+
+  // Animated camera: center [lon,lat] + zoom multiplier (1 = world view)
+  const [camera, setCamera] = useState<{ center: [number, number]; zoom: number }>({
+    center: [0, 15],
+    zoom: 1,
+  });
+  const animRef = useRef<number | null>(null);
+
+  const animateCamera = useCallback(
+    (target: { center: [number, number]; zoom: number }) => {
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+      const start = performance.now();
+      const from = camera;
+      const step = (now: number) => {
+        const t = Math.min(1, (now - start) / ZOOM_DURATION);
+        const k = easeInOutCubic(t);
+        setCamera({
+          center: [
+            from.center[0] + (target.center[0] - from.center[0]) * k,
+            from.center[1] + (target.center[1] - from.center[1]) * k,
+          ],
+          zoom: from.zoom + (target.zoom - from.zoom) * k,
+        });
+        if (t < 1) animRef.current = requestAnimationFrame(step);
+      };
+      animRef.current = requestAnimationFrame(step);
+    },
+    [camera],
+  );
+
+  // Animate to active country / reset to world when cleared
+  useEffect(() => {
+    if (activeCountry && CENTROIDS[activeCountry]) {
+      animateCamera({ center: CENTROIDS[activeCountry], zoom: ZOOM_LEVEL });
+    } else {
+      animateCamera({ center: [0, 15], zoom: 1 });
+    }
+    return () => {
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCountry]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -134,8 +180,11 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
     return "#C8C5BE";
   };
 
-  // Scale fills the container width; center[1]=15 keeps the inhabited world centred vertically
-  const scale = (dims.width - (panelOpen ? 340 : 0)) / 5.5;
+  // Base scale fills container; multiply by camera.zoom for zoom-in effect
+  const baseScale = (dims.width - (panelOpen ? 340 : 0)) / 5.5;
+  const scale = baseScale * camera.zoom;
+  // Markers/strokes are in projected space — counter-scale so they stay visually constant
+  const markerScale = 1 / camera.zoom;
 
   return (
     <div
@@ -147,7 +196,7 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
       <ComposableMap
         width={dims.width - (panelOpen ? 340 : 0)}
         height={dims.height}
-        projectionConfig={{ scale, center: [0, 15] }}
+        projectionConfig={{ scale, center: camera.center }}
         style={{ width: "100%", height: "100%", display: "block" }}
       >
         <Geographies geography={GEO_URL}>
@@ -166,7 +215,7 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
                     default: {
                       fill: getFill(iso),
                       stroke: getStroke(iso),
-                      strokeWidth: 0.4,
+                      strokeWidth: 0.4 * markerScale,
                       outline: "none",
                       cursor: iso ? "pointer" : "default",
                       transition: "fill 120ms ease",
@@ -174,14 +223,14 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
                     hover: {
                       fill: iso === activeCountry ? "#0A0A0A" : "#C8C5BE",
                       stroke: getStroke(iso),
-                      strokeWidth: 0.5,
+                      strokeWidth: 0.5 * markerScale,
                       outline: "none",
                       cursor: iso ? "pointer" : "default",
                     },
                     pressed: {
                       fill: "#0A0A0A",
                       stroke: "#0A0A0A",
-                      strokeWidth: 0.5,
+                      strokeWidth: 0.5 * markerScale,
                       outline: "none",
                     },
                   }}
@@ -202,29 +251,31 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
           const textFill = isActive ? "#0A0A0A" : "#FFFFFF";
           return (
             <Marker key={iso} coordinates={coords}>
-              <circle
-                r={11}
-                fill={circleFill}
-                stroke={circleStroke}
-                strokeWidth={1.5}
-                onClick={() => onCountryClick(iso, COUNTRY_NAMES[iso] ?? iso)}
-                style={{ pointerEvents: "auto", cursor: "pointer" }}
-              />
-              <text
-                textAnchor="middle"
-                y={4}
-                onClick={() => onCountryClick(iso, COUNTRY_NAMES[iso] ?? iso)}
-                style={{
-                  fontFamily: "DM Mono, monospace",
-                  fontSize: 9,
-                  fill: textFill,
-                  pointerEvents: "auto",
-                  userSelect: "none",
-                  cursor: "pointer",
-                }}
-              >
-                {data.employees}
-              </text>
+              <g style={{ transform: `scale(${markerScale})`, transformBox: "fill-box", transformOrigin: "center" }}>
+                <circle
+                  r={11}
+                  fill={circleFill}
+                  stroke={circleStroke}
+                  strokeWidth={1.5}
+                  onClick={() => onCountryClick(iso, COUNTRY_NAMES[iso] ?? iso)}
+                  style={{ pointerEvents: "auto", cursor: "pointer" }}
+                />
+                <text
+                  textAnchor="middle"
+                  y={4}
+                  onClick={() => onCountryClick(iso, COUNTRY_NAMES[iso] ?? iso)}
+                  style={{
+                    fontFamily: "DM Mono, monospace",
+                    fontSize: 9,
+                    fill: textFill,
+                    pointerEvents: "auto",
+                    userSelect: "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  {data.employees}
+                </text>
+              </g>
             </Marker>
           );
         })}
