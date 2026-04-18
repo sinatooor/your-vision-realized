@@ -97,6 +97,10 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dims, setDims] = useState({ width: 800, height: 500 });
+  // Centroid cache: ISO → [lon, lat], populated from geo features as they render
+  const centroidCacheRef = useRef<Record<string, [number, number]>>({});
+  // Bump on cache update so the activeCountry effect re-runs once the cache is ready
+  const [centroidsReady, setCentroidsReady] = useState(0);
 
   // Live camera state — driven by ZoomableGroup (wheel/pinch/drag) AND by click-animation
   const [position, setPosition] = useState<{ coordinates: [number, number]; zoom: number }>({
