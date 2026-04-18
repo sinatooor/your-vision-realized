@@ -223,8 +223,10 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
           zoom={position.zoom}
           minZoom={MIN_ZOOM}
           maxZoom={MAX_ZOOM}
-          onMoveEnd={(pos) => setPosition(pos)}
-          onMove={(pos) => setPosition(pos)}
+          onMoveEnd={(pos) => {
+            positionRef.current = pos;
+            setPosition(pos);
+          }}
         >
           <Geographies geography={GEO_URL}>
             {({ geographies }) => {
