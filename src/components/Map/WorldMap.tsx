@@ -131,10 +131,16 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
     });
   }, []);
 
-  // Zoom-to-country on click; reset to world when cleared
+  // Zoom-to-country on click; reset to world when cleared.
+  // Prefer dynamic centroid (works for every country in the geo dataset),
+  // fall back to the curated CENTROIDS table for marker-only countries.
   useEffect(() => {
-    if (activeCountry && CENTROIDS[activeCountry]) {
-      animateTo({ coordinates: CENTROIDS[activeCountry], zoom: COUNTRY_ZOOM });
+    if (activeCountry) {
+      const coords = centroidCacheRef.current[activeCountry] ?? CENTROIDS[activeCountry];
+      if (coords) {
+        animateTo({ coordinates: coords, zoom: COUNTRY_ZOOM });
+      }
+      // If centroids aren't loaded yet, the centroidsReady bump will re-trigger this effect
     } else {
       animateTo({ coordinates: [0, 15], zoom: 1 });
     }
@@ -142,7 +148,7 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
       if (animRef.current) cancelAnimationFrame(animRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeCountry]);
+  }, [activeCountry, centroidsReady]);
 
   useEffect(() => {
     const el = containerRef.current;
