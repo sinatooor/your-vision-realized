@@ -14,6 +14,7 @@ export function ProfileMenu() {
     loadPreset,
     loadCustom,
     addCustomCompany,
+    removeCustomCompany,
   } = useCompany();
 
   const [open, setOpen] = useState(false);
