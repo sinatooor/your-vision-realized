@@ -14,6 +14,7 @@ export function ProfileMenu() {
     loadPreset,
     loadCustom,
     addCustomCompany,
+    removeCustomCompany,
   } = useCompany();
 
   const [open, setOpen] = useState(false);
@@ -46,12 +47,6 @@ export function ProfileMenu() {
   }, [open]);
 
   const presetIds = Object.keys(COMPANY_PRESETS) as PresetId[];
-  const initials = (company.name || "??")
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("");
 
   const handleSelectPreset = (id: PresetId) => {
     loadPreset(id);
@@ -83,9 +78,7 @@ export function ProfileMenu() {
           open ? "text-primary" : "text-outline hover:text-primary"
         }`}
       >
-        <span className="w-6 h-6 flex items-center justify-center border border-outline-variant text-[9px] font-bold text-primary bg-surface-container">
-          {initials || "·"}
-        </span>
+        <MaterialIcon name="account_circle" className="text-[20px]" />
         <span className="hidden sm:inline max-w-[140px] truncate">
           {company.name || "Profile"}
         </span>
@@ -151,29 +144,50 @@ export function ProfileMenu() {
                 {customCompanies.map((c) => {
                   const isActive = activePreset === c.id;
                   return (
-                    <button
+                    <div
                       key={c.id}
-                      type="button"
-                      onClick={() => handleSelectCustom(c.id)}
-                      className={`w-full text-left px-4 py-2 flex items-center justify-between gap-2 hover:bg-surface-container transition-colors ${
+                      className={`group w-full px-4 py-2 flex items-center justify-between gap-2 hover:bg-surface-container transition-colors ${
                         isActive ? "bg-surface-container" : ""
                       }`}
                     >
-                      <div className="min-w-0">
-                        <p className="font-body text-sm text-primary truncate">
-                          {c.company.name || c.label}
-                        </p>
-                        <p className="font-mono text-[9px] tracking-widest uppercase text-outline truncate">
-                          {c.tagline}
-                        </p>
-                      </div>
-                      {isActive && (
-                        <MaterialIcon
-                          name="check"
-                          className="text-[16px] text-primary shrink-0"
-                        />
-                      )}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSelectCustom(c.id)}
+                        className="flex-1 min-w-0 text-left flex items-center justify-between gap-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-body text-sm text-primary truncate">
+                            {c.company.name || c.label}
+                          </p>
+                          <p className="font-mono text-[9px] tracking-widest uppercase text-outline truncate">
+                            {c.tagline}
+                          </p>
+                        </div>
+                        {isActive && (
+                          <MaterialIcon
+                            name="check"
+                            className="text-[16px] text-primary shrink-0"
+                          />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (
+                            window.confirm(
+                              `Remove "${c.company.name || c.label}"? This cannot be undone.`,
+                            )
+                          ) {
+                            removeCustomCompany(c.id);
+                          }
+                        }}
+                        aria-label={`Remove ${c.company.name || c.label}`}
+                        className="shrink-0 text-outline hover:text-critical transition-colors p-1"
+                      >
+                        <MaterialIcon name="delete_outline" className="text-[16px]" />
+                      </button>
+                    </div>
                   );
                 })}
               </>

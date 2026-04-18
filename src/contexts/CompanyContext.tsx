@@ -255,6 +255,7 @@ interface CompanyContextValue {
   loadPreset: (id: PresetId) => void;
   loadCustom: (id: string) => void;
   addCustomCompany: (name: string) => string;
+  removeCustomCompany: (id: string) => void;
 }
 
 const CompanyContext = createContext<CompanyContextValue | null>(null);
@@ -426,6 +427,26 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     [customCompanies],
   );
 
+  const removeCustomCompany = useCallback(
+    (id: string) => {
+      const next = customCompanies.filter((c) => c.id !== id);
+      persistCustom(next);
+      // If the removed one was active, fall back to default preset
+      if (activePreset === id) {
+        const fallback = COMPANY_PRESETS.nordhr;
+        setCompanyRaw(fallback.company);
+        setFootprintRaw(fallback.footprint);
+        setDataArchRaw(fallback.dataArch);
+        setActivePreset(fallback.id);
+        writeLocal("tg_company_profile", fallback.company);
+        writeLocal("tg_footprint", fallback.footprint);
+        writeLocal("tg_data_arch", fallback.dataArch);
+        writeLocal("tg_active_preset", fallback.id);
+      }
+    },
+    [customCompanies, activePreset],
+  );
+
   return (
     <CompanyContext.Provider
       value={{
@@ -440,6 +461,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         loadPreset,
         loadCustom,
         addCustomCompany,
+        removeCustomCompany,
       }}
     >
       {children}
