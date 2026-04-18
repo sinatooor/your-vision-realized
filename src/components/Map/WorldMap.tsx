@@ -169,6 +169,26 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
     return () => ro.disconnect();
   }, []);
 
+  // Disable wheel/trackpad-scroll zoom — only pinch gestures should zoom.
+  // On macOS trackpads, real pinch gestures fire wheel events with `ctrlKey === true`
+  // (synthetic), while two-finger scroll fires wheel events with `ctrlKey === false`.
+  // We block the latter from reaching ZoomableGroup so scrolling does nothing on the map.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) {
+        // Two-finger scroll / mouse wheel — stop ZoomableGroup from handling it.
+        e.stopPropagation();
+        e.preventDefault();
+      }
+      // ctrlKey === true means a pinch gesture — let it through to zoom.
+    };
+    // capture: true so we intercept BEFORE ZoomableGroup's listener runs
+    el.addEventListener("wheel", onWheel, { capture: true, passive: false });
+    return () => el.removeEventListener("wheel", onWheel, { capture: true } as EventListenerOptions);
+  }, []);
+
   const handleMouseEnter = useCallback(
     (e: React.MouseEvent, iso: string, name: string) => {
       setHovered(iso);
