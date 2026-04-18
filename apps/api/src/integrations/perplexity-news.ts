@@ -1,4 +1,4 @@
-import fetch from "node-fetch";
+import { generateText, stripJsonFences } from "../lib/claude";
 
 export interface NewsCitation {
   title: string;
@@ -29,106 +29,48 @@ function countryName(iso: string): string {
   return COUNTRY_NAMES[iso] ?? iso;
 }
 
-function buildQuery(iso: string, industry: string): string {
-  const name = countryName(iso);
-  return `Significant legal, regulatory, tax, employment, data protection, or compliance changes in ${name} affecting foreign companies expanding into the country${industry ? ` (industry context: ${industry})` : ""} in the last 30 days. Focus on enacted laws, official regulator announcements, court rulings, or clear legislative proposals. Provide concise headlines, dates, and the regulator/court issuing each item.`;
-}
+const SYSTEM_PROMPT = `You are a legal intelligence analyst specialising in cross-border regulatory compliance. Summarise the key legal, tax, employment, data-protection, and licensing obligations that foreign companies face when expanding into a given jurisdiction. Focus on current regulatory reality — enacted laws, key thresholds, and enforcement posture. Return ONLY strict JSON, no markdown fences, no prose outside the JSON.
 
-/**
- * Calls Perplexity Sonar to fetch recent regulatory news for a target jurisdiction.
- * Returns a stub result if PERPLEXITY_API_KEY is not configured (graceful degradation).
- */
+Schema:
+{
+  "summary": string,   // 2-3 sentence overview of the regulatory landscape
+  "highlights": string[]  // 4-6 short bullets, each ≤ 20 words, covering distinct obligation areas
+}`;
+
 export async function fetchTargetCountryNews(
   iso: string,
   industry: string,
 ): Promise<NewsScoutResult> {
   const name = countryName(iso);
-  const apiKey = process.env.PERPLEXITY_API_KEY;
   const retrievedAt = new Date().toISOString();
 
-  if (!apiKey) {
-    return {
-      isLive: false,
-      summary: `Live news scout disabled — set PERPLEXITY_API_KEY to enable real-time regulatory monitoring for ${name}.`,
-      highlights: [],
-      citations: [],
-      retrievedAt,
-      countryName: name,
-      countryIso: iso,
-      reason: "PERPLEXITY_API_KEY not configured",
-    };
-  }
+  const userPrompt = `Jurisdiction: ${name} (${iso})
+Industry context: ${industry || "technology / software"}
+
+Summarise the key compliance obligations and regulatory risks for a foreign company expanding into ${name}. Cover employment law, data protection, tax registration, corporate setup, and any sector-specific licensing relevant to the industry.`;
 
   try {
-    const response = await fetch("https://api.perplexity.ai/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "sonar",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a legal intelligence analyst. Return concise, factual summaries of recent regulatory developments. Output strict JSON only — no prose, no markdown fences. Schema: {\"summary\": string (2-3 sentences), \"highlights\": string[] (3-5 short bullets, each starting with a date in YYYY-MM-DD if known)}. Cite primary sources where possible.",
-          },
-          { role: "user", content: buildQuery(iso, industry) },
-        ],
-        search_recency_filter: "month",
-        max_tokens: 700,
-        temperature: 0.1,
-        return_citations: true,
-      }),
-    });
+    const raw = await generateText(SYSTEM_PROMPT, userPrompt, 600);
+    const cleaned = stripJsonFences(raw);
 
-    if (!response.ok) {
-      return {
-        isLive: false,
-        summary: `News scout unavailable (HTTP ${response.status}).`,
-        highlights: [],
-        citations: [],
-        retrievedAt,
-        countryName: name,
-        countryIso: iso,
-        reason: `Perplexity API returned ${response.status}`,
-      };
-    }
-
-    const data = (await response.json()) as {
-      choices?: { message?: { content?: string } }[];
-      citations?: string[];
-    };
-
-    const content = data.choices?.[0]?.message?.content?.trim() ?? "";
     let summary = "";
     let highlights: string[] = [];
 
     try {
-      const cleaned = content.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
       const parsed = JSON.parse(cleaned) as { summary?: string; highlights?: string[] };
       summary = parsed.summary?.trim() ?? "";
-      highlights = (parsed.highlights ?? []).filter((h) => typeof h === "string").slice(0, 5);
+      highlights = (parsed.highlights ?? []).filter((h) => typeof h === "string").slice(0, 6);
     } catch {
-      // If model didn't return JSON, take the first line as summary, split rest as highlights.
-      const lines = content.split("\n").map((l) => l.trim()).filter(Boolean);
+      const lines = raw.split("\n").map((l) => l.trim()).filter(Boolean);
       summary = lines[0] ?? "";
-      highlights = lines.slice(1, 6).map((l) => l.replace(/^[-•*\d.\s]+/, ""));
+      highlights = lines.slice(1, 7).map((l) => l.replace(/^[-•*\d.\s]+/, ""));
     }
 
-    const citationUrls = Array.isArray(data.citations) ? data.citations.slice(0, 5) : [];
-    const citations: NewsCitation[] = citationUrls.map((url) => {
-      let host = url;
-      try { host = new URL(url).hostname.replace(/^www\./, ""); } catch { /* keep raw */ }
-      return { title: host, url };
-    });
-
     return {
-      isLive: true,
-      summary: summary || `No standout regulatory developments reported in ${name} in the last 30 days.`,
+      isLive: false,
+      summary: summary || `Regulatory overview for ${name} could not be generated.`,
       highlights,
-      citations,
+      citations: [],
       retrievedAt,
       countryName: name,
       countryIso: iso,
@@ -136,13 +78,13 @@ export async function fetchTargetCountryNews(
   } catch (err) {
     return {
       isLive: false,
-      summary: `News scout error: ${err instanceof Error ? err.message : "unknown error"}`,
+      summary: `Regulatory scout unavailable for ${name}.`,
       highlights: [],
       citations: [],
       retrievedAt,
       countryName: name,
       countryIso: iso,
-      reason: "fetch failed",
+      reason: err instanceof Error ? err.message : "unknown error",
     };
   }
 }
