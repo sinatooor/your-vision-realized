@@ -91,7 +91,7 @@ export function MemoChat({ sessionId, onMemoUpdate }: MemoChatProps) {
   };
 
   return (
-    <div className="flex flex-col h-full border-r border-outline-variant bg-surface">
+    <div className="flex flex-col h-full min-h-0 bg-surface">
       {/* Header */}
       <div className="px-5 py-4 border-b border-outline-variant">
         <p className="font-mono text-[9px] tracking-widest uppercase text-outline mb-1">
