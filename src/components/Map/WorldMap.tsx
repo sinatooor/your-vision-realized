@@ -230,8 +230,8 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
         >
           <Geographies geography={GEO_URL}>
             {({ geographies }) => {
-              // Populate centroid cache once per dataset load (covers ALL countries on the map)
-              if (geographies.length && Object.keys(centroidCacheRef.current).length < geographies.length) {
+              // Populate centroid cache exactly once per dataset load (covers ALL countries)
+              if (geographies.length && !centroidsBuiltRef.current) {
                 const next: Record<string, [number, number]> = {};
                 for (const g of geographies) {
                   const code = getAlpha2(g);
@@ -242,6 +242,7 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
                   }
                 }
                 centroidCacheRef.current = next;
+                centroidsBuiltRef.current = true;
                 // Defer state bump out of render
                 queueMicrotask(() => setCentroidsReady((n) => n + 1));
               }
