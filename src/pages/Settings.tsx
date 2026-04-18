@@ -19,7 +19,7 @@ export default function Settings() {
         </div>
 
         {/* Analysis Session */}
-        <section className="mb-8">
+        <section id="settings-session" className="mb-8 scroll-mt-24">
           <p className="font-mono text-[9px] tracking-widest uppercase text-outline mb-4">
             Current Analysis Session
           </p>
@@ -58,7 +58,7 @@ export default function Settings() {
         </section>
 
         {/* Analysis Defaults */}
-        <section className="mb-8">
+        <section id="settings-defaults" className="mb-8 scroll-mt-24">
           <p className="font-mono text-[9px] tracking-widest uppercase text-outline mb-4">
             Analysis Defaults
           </p>
@@ -105,7 +105,7 @@ export default function Settings() {
         </section>
 
         {/* System Status */}
-        <section className="mb-8">
+        <section id="settings-status" className="mb-8 scroll-mt-24">
           <p className="font-mono text-[9px] tracking-widest uppercase text-outline mb-4">
             System Status
           </p>
@@ -129,7 +129,7 @@ export default function Settings() {
         </section>
 
         {/* About */}
-        <section>
+        <section id="settings-about" className="scroll-mt-24">
           <p className="font-mono text-[9px] tracking-widest uppercase text-outline mb-4">
             About
           </p>

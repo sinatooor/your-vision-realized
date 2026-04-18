@@ -39,7 +39,7 @@ export default function Plan() {
       style={{ height: "calc(100vh - 32px)" }}
     >
       <div className="px-12 py-8 max-w-5xl">
-        <div className="mb-8">
+        <section id="plan-summary" className="mb-8 scroll-mt-24">
           <h1 className="font-headline text-2xl font-bold text-primary">Action Plan</h1>
           <p className="font-body text-sm text-on-surface-variant mt-1">
             Sequenced legal tasks across a 90-day horizon with clear ownership and dependencies.
@@ -72,8 +72,22 @@ export default function Plan() {
               </div>
             )}
           </div>
-        </div>
-        <ActionPlan actions={result.actions} />
+        </section>
+        <section id="plan-blocking" className="scroll-mt-24 mb-10">
+          <h2 className="font-headline text-xl font-bold text-primary mb-2">Blocking Actions</h2>
+          <p className="font-body text-sm text-on-surface-variant">
+            {blocking} action{blocking === 1 ? "" : "s"} must be completed before the expansion can proceed.
+          </p>
+        </section>
+        <section id="plan-timeline" className="scroll-mt-24 mb-12">
+          <ActionPlan actions={result.actions} />
+        </section>
+        <section id="plan-owners" className="scroll-mt-24">
+          <h2 className="font-headline text-xl font-bold text-primary mb-3">Owners</h2>
+          <p className="font-body text-sm text-on-surface-variant">
+            Tasks are distributed across partner, associate, local counsel, and client roles. Confirm assignments with the matter team.
+          </p>
+        </section>
       </div>
     </main>
   );
