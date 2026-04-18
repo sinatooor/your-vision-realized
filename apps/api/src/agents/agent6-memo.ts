@@ -2,6 +2,7 @@ import { generateText } from "../lib/claude";
 import { SSEStream, emitAgent } from "../lib/sse";
 import { Action, Conflict, ExpansionTwin, Obligation, Scenario } from "../types";
 import { loadStatuteExcerpts, formatStatuteContext } from "../data/statute-loader";
+import { NewsScoutResult } from "../integrations/perplexity-news";
 
 const AGENT = "Agent 6 — Memo Writer";
 
@@ -13,7 +14,8 @@ Structure your memo with these sections:
 3. Recommended Structure (analysis of the recommended expansion vehicle)
 4. Risk Register (table-style: Obligation | Jurisdiction | Severity | Action)
 5. 30/60/90-Day Action Plan
-6. Evidence Pack (list of all sources cited)`;
+6. Recent Regulatory Developments (cite news sources where supplied)
+7. Evidence Pack (list of all sources cited)`;
 
 export async function generateMemo(
   twin: ExpansionTwin,
@@ -22,6 +24,7 @@ export async function generateMemo(
   scenarios: Scenario[],
   actions: Action[],
   stream: SSEStream,
+  recentDevelopments: NewsScoutResult[] = [],
 ): Promise<{ executiveSummary: string; memoMarkdown: string }> {
   emitAgent(stream, AGENT, "agent_start", "Drafting client advisory memo…");
 
