@@ -4,12 +4,20 @@ import { v4 as uuidv4 } from "uuid";
 import { SSEStream, emitAgent } from "../lib/sse";
 import { ExpansionTwin, Obligation } from "../types";
 import { enrichObligationFromEurLex, CELEX_MAP } from "../integrations/eurlex";
-import { screenEntity } from "../integrations/opensanctions";
+import { screenEntity, screenCompany, screenMultipleEntities } from "../integrations/opensanctions";
 import { resolveGleifResult } from "../integrations/gleif";
+import { searchCompany, getCompanyOfficers } from "../integrations/companies-house";
+import { validateVATNumber } from "../integrations/vies";
 
 const AGENT = "Agent 2 — Jurisdiction Scout";
 
 const RULE_PACK_DIR = join(__dirname, "../data/rule-packs");
+
+const EU_MEMBER_STATES = new Set([
+  "AT","BE","BG","CY","CZ","DE","DK","EE","ES","FI","FR","GR",
+  "HR","HU","IE","IT","LT","LU","LV","MT","NL","PL","PT","RO",
+  "SE","SI","SK",
+]);
 
 function loadRulePack(iso: string): Obligation[] {
   try {
@@ -44,8 +52,7 @@ async function scoutCountry(
   const pack = loadRulePack(country);
   const filtered = filterByRelevance(pack, twin, country).map(assignObligationId);
 
-  const euCountries = ["DE", "SE", "FR", "NL", "BE", "PL", "AT", "DK", "FI"];
-  if (euCountries.includes(country)) {
+  if (EU_MEMBER_STATES.has(country)) {
     const celexKeys = Object.keys(CELEX_MAP);
     const enriched = await Promise.allSettled(
       filtered
@@ -94,23 +101,109 @@ export async function scoutJurisdictions(
     }
   });
 
-  // OpenSanctions screening
-  emitAgent(stream, AGENT, "api_call", `Querying OpenSanctions /match for ${twin.company.name}…`);
-  const screeningResult = await screenEntity(twin.company.name).catch(() => null);
-  emitAgent(stream, AGENT, "api_result", `OpenSanctions: ${screeningResult ? (screeningResult.isClean ? "✓ Clean — no sanctions matches" : `⚠ ${screeningResult.matchCount} match(es) found`) : "○ Screening unavailable"}`, {
-    isClean: screeningResult?.isClean ?? true,
-    matchCount: screeningResult?.matchCount ?? 0,
-  });
+  // ── OpenSanctions: screen entity as person ──────────────────────────────────
+  emitAgent(stream, AGENT, "api_call", `Querying OpenSanctions for ${twin.company.name} (entity)…`);
+  const personScreening = await screenEntity(twin.company.name, twin.company.hqCountry).catch(() => null);
+  emitAgent(stream, AGENT, "api_result",
+    `OpenSanctions (entity): ${personScreening
+      ? personScreening.isClean
+        ? "✓ Clean"
+        : `⚠ ${personScreening.matchCount} match(es) — score ${personScreening.highestScore.toFixed(2)}`
+      : "○ Unavailable"}`,
+    { isClean: personScreening?.isClean ?? true, matchCount: personScreening?.matchCount ?? 0 },
+  );
 
-  // GLEIF entity resolution
+  // ── OpenSanctions: screen as Company ───────────────────────────────────────
+  emitAgent(stream, AGENT, "api_call", `Querying OpenSanctions for ${twin.company.name} (company)…`);
+  const companyScreening = await screenCompany(twin.company.name, twin.company.hqCountry).catch(() => null);
+  emitAgent(stream, AGENT, "api_result",
+    `OpenSanctions (company): ${companyScreening
+      ? companyScreening.isClean
+        ? "✓ Clean"
+        : `⚠ ${companyScreening.matchCount} match(es) — score ${companyScreening.highestScore.toFixed(2)}`
+      : "○ Unavailable"}`,
+    { isClean: companyScreening?.isClean ?? true, matchCount: companyScreening?.matchCount ?? 0 },
+  );
+
+  // ── GLEIF entity resolution ─────────────────────────────────────────────────
   emitAgent(stream, AGENT, "api_call", `Querying GLEIF for ${twin.company.name}…`);
   const gleifResult = await resolveGleifResult(twin.company.name).catch(() => null);
-  emitAgent(stream, AGENT, "api_result", `GLEIF: ${gleifResult?.entity ? `✓ Found — ${gleifResult.entity.legalName} (${gleifResult.entity.jurisdiction})` : "○ Entity not found in GLEIF registry"}`, {
-    found: !!gleifResult?.entity,
-    jurisdictions: gleifResult?.jurisdictions ?? [],
-  });
+  emitAgent(stream, AGENT, "api_result",
+    `GLEIF: ${gleifResult?.entity
+      ? `✓ Found — ${gleifResult.entity.legalName} (${gleifResult.entity.jurisdiction})${gleifResult.jurisdictions.length > 1 ? ` — group spans ${gleifResult.jurisdictions.join(", ")}` : ""}`
+      : "○ Entity not found in GLEIF registry"}`,
+    { found: !!gleifResult?.entity, jurisdictions: gleifResult?.jurisdictions ?? [] },
+  );
 
-  // Deduplication
+  // ── Companies House (GB only) ───────────────────────────────────────────────
+  if (unique.includes("GB")) {
+    emitAgent(stream, AGENT, "api_call", `Querying Companies House for ${twin.company.name}…`);
+    const chResults = await searchCompany(twin.company.name).catch(() => []);
+
+    if (chResults.length > 0) {
+      const top = chResults[0]!;
+      emitAgent(stream, AGENT, "api_result",
+        `Companies House: ✓ ${top.companyName} — ${top.companyStatus} (${top.companyType})`,
+        { companyNumber: top.companyNumber, status: top.companyStatus },
+      );
+
+      const officers = await getCompanyOfficers(top.companyNumber).catch(() => []);
+      if (officers.length > 0) {
+        emitAgent(stream, AGENT, "api_call", `Screening ${officers.length} director(s) via OpenSanctions…`);
+        const dirScreening = await screenMultipleEntities(
+          officers.map((o) => ({ name: o.name, country: "GB" })),
+        ).catch(() => null);
+
+        const flagged = dirScreening
+          ? [...dirScreening.results.values()].filter((r) => !r.isClean).length
+          : 0;
+        emitAgent(stream, AGENT, "api_result",
+          flagged > 0
+            ? `⚠ Directors: ${flagged} of ${officers.length} flagged in sanctions lists`
+            : `✓ Directors: All ${officers.length} clear (OpenSanctions)`,
+          { flagged, total: officers.length },
+        );
+      }
+    } else {
+      emitAgent(stream, AGENT, "api_result",
+        `Companies House: ○ ${twin.company.name} not found in UK registry`,
+        { found: false },
+      );
+    }
+  }
+
+  // ── VIES (EU presence check) ────────────────────────────────────────────────
+  const euTargets = unique.filter((c) => EU_MEMBER_STATES.has(c));
+  if (euTargets.length > 0) {
+    // If the twin's rawBrief contains a VAT number pattern, attempt to validate it
+    const vatPattern = /\b([A-Z]{2})\s*([0-9A-Z]{8,12})\b/g;
+    const vatMatches = [...twin.rawBrief.matchAll(vatPattern)];
+    const euVatMatches = vatMatches.filter(([, cc]) => EU_MEMBER_STATES.has(cc!));
+
+    if (euVatMatches.length > 0) {
+      emitAgent(stream, AGENT, "api_call", `Validating ${euVatMatches.length} VAT number(s) via VIES…`);
+      const vatResults = await Promise.allSettled(
+        euVatMatches.map(([, cc, num]) => validateVATNumber(cc!, num!)),
+      );
+      const valid = vatResults.filter(
+        (r) => r.status === "fulfilled" && r.value.valid === true,
+      ).length;
+      const unavailable = vatResults.filter(
+        (r) => r.status === "fulfilled" && r.value.valid === null,
+      ).length;
+      emitAgent(stream, AGENT, "api_result",
+        `VIES: ${valid} valid, ${euVatMatches.length - valid - unavailable} invalid, ${unavailable} service unavailable`,
+        { valid, total: euVatMatches.length },
+      );
+    } else {
+      emitAgent(stream, AGENT, "api_result",
+        `VIES: ○ EU presence detected (${euTargets.join(", ")}) — include VAT numbers in brief for live validation`,
+        { countriesInScope: euTargets },
+      );
+    }
+  }
+
+  // ── Deduplication ───────────────────────────────────────────────────────────
   const seen = new Map<string, Obligation>();
   for (const o of allObligations) {
     const key = `${o.jurisdiction}:${o.title}`;
@@ -126,10 +219,10 @@ export async function scoutJurisdictions(
     return acc;
   }, {});
 
-  emitAgent(stream, AGENT, "agent_complete", `Retrieved ${deduplicated.length} obligations across ${unique.length} jurisdictions`, {
-    total: deduplicated.length,
-    byCountry,
-  });
+  emitAgent(stream, AGENT, "agent_complete",
+    `Retrieved ${deduplicated.length} obligations across ${unique.length} jurisdictions`,
+    { total: deduplicated.length, byCountry },
+  );
 
   return deduplicated;
 }

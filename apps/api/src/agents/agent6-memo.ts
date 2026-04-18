@@ -1,6 +1,7 @@
 import { generateText } from "../lib/claude";
 import { SSEStream, emitAgent } from "../lib/sse";
 import { Action, Conflict, ExpansionTwin, Obligation, Scenario } from "../types";
+import { loadStatuteExcerpts, formatStatuteContext } from "../data/statute-loader";
 
 const AGENT = "Agent 6 — Memo Writer";
 
@@ -30,6 +31,13 @@ export async function generateMemo(
     twin.expansion.targetCountries.includes(o.jurisdiction),
   );
 
+  // Load real statute text for any DE/GB/EU obligations we have raw files for
+  const allRelevantObligations = obligations.filter((o) =>
+    ["DE", "GB", "EU", ...twin.expansion.targetCountries].includes(o.jurisdiction),
+  );
+  const statuteExcerpts = loadStatuteExcerpts(allRelevantObligations);
+  const statuteContext = formatStatuteContext(statuteExcerpts);
+
   const userPrompt = `Write a complete client advisory memo for the following expansion.
 
 ## MATTER SUMMARY
@@ -56,8 +64,11 @@ ${targetObligations.map((o) => `- [${o.jurisdiction}] ${o.title} (${o.severity})
 
 ## ACTION PLAN
 ${actions.map((a) => `[${a.horizon}] ${a.blocking ? "BLOCKING: " : ""}${a.title} (${a.owner}, ${a.estimatedDays}d)`).join("\n")}
-
-Write the complete memo now. Minimum 800 words. Include at least 5 specific legal citations in the format [Jurisdiction — Law Name, Citation].`;
+${statuteContext ? `
+## PRIMARY SOURCE TEXT (cite directly — these are the authoritative statute provisions)
+${statuteContext}
+` : ""}
+Write the complete memo now. Minimum 800 words. Include at least 5 specific legal citations in the format [Jurisdiction — Law Name, Citation].${statuteExcerpts.length > 0 ? ` You have ${statuteExcerpts.length} primary source excerpt(s) above — quote them directly where relevant rather than paraphrasing.` : ""}`;
 
   const memoMarkdown = await generateText(SYSTEM_PROMPT, userPrompt, 3000);
 
@@ -74,6 +85,7 @@ Write the complete memo now. Minimum 800 words. Include at least 5 specific lega
 
   emitAgent(stream, AGENT, "memo_ready", "Client advisory memo ready", {
     wordCount: memoMarkdown.split(/\s+/).length,
+    statuteSourcesUsed: statuteExcerpts.length,
   });
 
   return { executiveSummary, memoMarkdown };
