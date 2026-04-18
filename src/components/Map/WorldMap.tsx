@@ -85,11 +85,57 @@ function getCountryName(geo: { properties?: { name?: string } }): string {
   return geo.properties?.name ?? "";
 }
 
+const ZOOM_LEVEL = 3;
+const ZOOM_DURATION = 600; // ms
+const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+
 export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpen }: WorldMapProps) {
   const [hovered, setHovered] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dims, setDims] = useState({ width: 800, height: 500 });
+
+  // Animated camera: center [lon,lat] + zoom multiplier (1 = world view)
+  const [camera, setCamera] = useState<{ center: [number, number]; zoom: number }>({
+    center: [0, 15],
+    zoom: 1,
+  });
+  const animRef = useRef<number | null>(null);
+
+  const animateCamera = useCallback(
+    (target: { center: [number, number]; zoom: number }) => {
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+      const start = performance.now();
+      const from = camera;
+      const step = (now: number) => {
+        const t = Math.min(1, (now - start) / ZOOM_DURATION);
+        const k = easeInOutCubic(t);
+        setCamera({
+          center: [
+            from.center[0] + (target.center[0] - from.center[0]) * k,
+            from.center[1] + (target.center[1] - from.center[1]) * k,
+          ],
+          zoom: from.zoom + (target.zoom - from.zoom) * k,
+        });
+        if (t < 1) animRef.current = requestAnimationFrame(step);
+      };
+      animRef.current = requestAnimationFrame(step);
+    },
+    [camera],
+  );
+
+  // Animate to active country / reset to world when cleared
+  useEffect(() => {
+    if (activeCountry && CENTROIDS[activeCountry]) {
+      animateCamera({ center: CENTROIDS[activeCountry], zoom: ZOOM_LEVEL });
+    } else {
+      animateCamera({ center: [0, 15], zoom: 1 });
+    }
+    return () => {
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCountry]);
 
   useEffect(() => {
     const el = containerRef.current;
