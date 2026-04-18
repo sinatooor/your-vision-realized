@@ -52,7 +52,6 @@ export const SIDE_NAV_SECTIONS: Record<string, { title: string; sections: SideNa
   "/settings": {
     title: "Settings",
     sections: [
-      { id: "settings-client", icon: "business", label: "Client Profile" },
       { id: "settings-session", icon: "analytics", label: "Session" },
       { id: "settings-defaults", icon: "tune", label: "Defaults" },
       { id: "settings-status", icon: "monitoring", label: "System Status" },
