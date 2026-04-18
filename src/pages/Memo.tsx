@@ -113,6 +113,8 @@ export default function Memo() {
                 executiveSummary: result.executiveSummary,
                 memoMarkdown: result.memoMarkdown,
               }}
+              signOff={signOff}
+              onMemoChange={(patch) => updateMemo(patch)}
             />
           </section>
 

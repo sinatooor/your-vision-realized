@@ -1,13 +1,16 @@
 import ReactMarkdown from "react-markdown";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   exportMemoAsDocx,
   exportMemoAsMarkdown,
   exportMemoAsPdf,
 } from "@/lib/memoExporters";
+import type { MemoSignOff } from "@/lib/memoChat";
 
 interface MemoExportProps {
   memo: { executiveSummary: string; memoMarkdown: string };
+  signOff?: MemoSignOff | null;
+  onMemoChange?: (patch: { memoMarkdown?: string; executiveSummary?: string }) => void;
 }
 
 const markdownComponents = {
@@ -31,13 +34,26 @@ const summaryComponents = {
   p: ({ children }: { children?: React.ReactNode }) => <p className="font-body text-base text-on-surface leading-relaxed italic mb-2 last:mb-0">{children}</p>,
 };
 
-export function MemoExport({ memo }: MemoExportProps) {
+export function MemoExport({ memo, signOff, onMemoChange }: MemoExportProps) {
   const [busy, setBusy] = useState<null | "pdf" | "docx" | "md">(null);
+  const [editing, setEditing] = useState(false);
+  const [draftBody, setDraftBody] = useState(memo.memoMarkdown);
+  const [draftSummary, setDraftSummary] = useState(memo.executiveSummary);
+
+  // Keep drafts in sync when memo changes externally (e.g. AI chat edit)
+  useEffect(() => {
+    if (!editing) {
+      setDraftBody(memo.memoMarkdown);
+      setDraftSummary(memo.executiveSummary);
+    }
+  }, [memo.memoMarkdown, memo.executiveSummary, editing]);
+
+  const payload = { ...memo, signOff: signOff ?? null };
 
   const handleMarkdown = () => {
     setBusy("md");
     try {
-      exportMemoAsMarkdown(memo);
+      exportMemoAsMarkdown(payload);
     } finally {
       setBusy(null);
     }
@@ -46,7 +62,7 @@ export function MemoExport({ memo }: MemoExportProps) {
   const handlePdf = () => {
     setBusy("pdf");
     try {
-      exportMemoAsPdf(memo);
+      exportMemoAsPdf(payload);
     } finally {
       setBusy(null);
     }
@@ -55,10 +71,27 @@ export function MemoExport({ memo }: MemoExportProps) {
   const handleDocx = async () => {
     setBusy("docx");
     try {
-      await exportMemoAsDocx(memo);
+      await exportMemoAsDocx(payload);
     } finally {
       setBusy(null);
     }
+  };
+
+  const handleStartEdit = () => {
+    setDraftBody(memo.memoMarkdown);
+    setDraftSummary(memo.executiveSummary);
+    setEditing(true);
+  };
+
+  const handleSaveEdit = () => {
+    onMemoChange?.({ memoMarkdown: draftBody, executiveSummary: draftSummary });
+    setEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    setDraftBody(memo.memoMarkdown);
+    setDraftSummary(memo.executiveSummary);
+    setEditing(false);
   };
 
   const btnClass =
@@ -71,28 +104,67 @@ export function MemoExport({ memo }: MemoExportProps) {
         <p className="font-mono text-[9px] tracking-widest uppercase text-outline mb-3">
           EXECUTIVE SUMMARY
         </p>
-        <div className="font-body text-base text-on-surface leading-relaxed">
-          <ReactMarkdown components={summaryComponents}>{memo.executiveSummary}</ReactMarkdown>
-        </div>
+        {editing ? (
+          <textarea
+            value={draftSummary}
+            onChange={(e) => setDraftSummary(e.target.value)}
+            rows={5}
+            className="w-full bg-surface border border-outline-variant font-body text-base text-on-surface italic leading-relaxed p-3 focus:outline-none focus:border-primary resize-y"
+          />
+        ) : (
+          <div className="font-body text-base text-on-surface leading-relaxed">
+            <ReactMarkdown components={summaryComponents}>{memo.executiveSummary}</ReactMarkdown>
+          </div>
+        )}
       </div>
 
-      {/* Export buttons */}
+      {/* Action buttons */}
       <div className="flex flex-wrap gap-3 mb-8 print:hidden">
-        <button onClick={handlePdf} disabled={busy !== null} className={btnClass}>
-          {busy === "pdf" ? "EXPORTING…" : "EXPORT AS PDF ↓"}
-        </button>
-        <button onClick={handleDocx} disabled={busy !== null} className={btnClass}>
-          {busy === "docx" ? "EXPORTING…" : "EXPORT AS DOCX ↓"}
-        </button>
-        <button onClick={handleMarkdown} disabled={busy !== null} className={btnClass}>
-          {busy === "md" ? "EXPORTING…" : "EXPORT AS MARKDOWN ↓"}
-        </button>
+        {editing ? (
+          <>
+            <button onClick={handleSaveEdit} className={`${btnClass} bg-primary text-primary-foreground hover:bg-primary/90`}>
+              SAVE CHANGES
+            </button>
+            <button onClick={handleCancelEdit} className={btnClass}>
+              CANCEL
+            </button>
+          </>
+        ) : (
+          <>
+            <button onClick={handleStartEdit} disabled={busy !== null} className={btnClass}>
+              ✎ EDIT MEMO
+            </button>
+            <button onClick={handlePdf} disabled={busy !== null} className={btnClass}>
+              {busy === "pdf" ? "EXPORTING…" : "EXPORT AS PDF ↓"}
+            </button>
+            <button onClick={handleDocx} disabled={busy !== null} className={btnClass}>
+              {busy === "docx" ? "EXPORTING…" : "EXPORT AS DOCX ↓"}
+            </button>
+            <button onClick={handleMarkdown} disabled={busy !== null} className={btnClass}>
+              {busy === "md" ? "EXPORTING…" : "EXPORT AS MARKDOWN ↓"}
+            </button>
+          </>
+        )}
       </div>
 
       {/* Full memo */}
-      <div className="border border-outline-variant p-8 prose prose-sm max-w-none font-body text-on-surface">
-        <ReactMarkdown components={markdownComponents}>{memo.memoMarkdown}</ReactMarkdown>
-      </div>
+      {editing ? (
+        <div className="border border-primary p-2">
+          <p className="font-mono text-[9px] tracking-widest uppercase text-outline px-2 py-1 mb-1">
+            Editing memo body — supports Markdown
+          </p>
+          <textarea
+            value={draftBody}
+            onChange={(e) => setDraftBody(e.target.value)}
+            rows={32}
+            className="w-full bg-surface font-mono text-xs text-on-surface leading-relaxed p-4 focus:outline-none resize-y"
+          />
+        </div>
+      ) : (
+        <div className="border border-outline-variant p-8 prose prose-sm max-w-none font-body text-on-surface">
+          <ReactMarkdown components={markdownComponents}>{memo.memoMarkdown}</ReactMarkdown>
+        </div>
+      )}
     </div>
   );
 }

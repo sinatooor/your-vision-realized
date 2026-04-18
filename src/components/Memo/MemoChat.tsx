@@ -160,9 +160,14 @@ export function MemoChat({ sessionId, onMemoUpdate }: MemoChatProps) {
         ))}
         {sending && (
           <div className="flex justify-start">
-            <div className="bg-surface-container border border-outline-variant px-4 py-3">
+            <div className="bg-surface-container border border-outline-variant px-4 py-3 flex items-center gap-2">
+              <span className="inline-flex gap-1">
+                <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" style={{ animationDelay: "0ms" }} />
+                <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" style={{ animationDelay: "150ms" }} />
+                <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" style={{ animationDelay: "300ms" }} />
+              </span>
               <p className="font-mono text-[9px] tracking-widest uppercase text-outline">
-                AI Partner · editing memo…
+                Processing document…
               </p>
             </div>
           </div>

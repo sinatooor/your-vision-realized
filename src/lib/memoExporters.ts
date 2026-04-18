@@ -8,18 +8,44 @@ import {
   AlignmentType,
   BorderStyle,
   LevelFormat,
+  ImageRun,
 } from "docx";
 import { saveAs } from "file-saver";
+import type { MemoSignOff } from "@/lib/memoChat";
 
 const FIRM_NAME = "JurisdictIQ";
 const FIRM_TAGLINE = "Cross-Border Legal Intelligence";
+
+export interface MemoExportPayload {
+  executiveSummary: string;
+  memoMarkdown: string;
+  signOff?: MemoSignOff | null;
+}
 
 function dateStamp() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function formatSignedDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
 function fileBase() {
   return `${FIRM_NAME}-Advisory-Memo-${dateStamp()}`;
+}
+
+function dataUrlToUint8Array(dataUrl: string): { bytes: Uint8Array; type: "png" | "jpg" } | null {
+  const m = /^data:image\/(png|jpeg|jpg);base64,(.+)$/i.exec(dataUrl);
+  if (!m) return null;
+  const type = m[1].toLowerCase() === "png" ? "png" : "jpg";
+  const binary = atob(m[2]);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return { bytes, type };
 }
 
 /* ---------------- Markdown parsing (lightweight) ---------------- */
@@ -166,7 +192,7 @@ function parseInline(text: string): InlineRun[] {
 
 /* ---------------- PDF Export ---------------- */
 
-export function exportMemoAsPdf(memo: { executiveSummary: string; memoMarkdown: string }) {
+export function exportMemoAsPdf(memo: MemoExportPayload) {
   const doc = new jsPDF({ unit: "pt", format: "letter" });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
@@ -365,13 +391,55 @@ export function exportMemoAsPdf(memo: { executiveSummary: string; memoMarkdown: 
     }
   }
 
+
+  // Sign-off block
+  if (memo.signOff) {
+    y += 24;
+    ensure(180);
+    doc.setDrawColor(...PRIMARY);
+    doc.setLineWidth(1);
+    doc.line(marginX, y, marginX + contentW, y);
+    y += 20;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...PRIMARY);
+    doc.text("APPROVED & SIGNED OFF", marginX, y);
+    y += 18;
+
+    if (memo.signOff.signatureDataUrl) {
+      try {
+        ensure(80);
+        doc.addImage(memo.signOff.signatureDataUrl, "PNG", marginX, y, 200, 60, undefined, "FAST");
+        y += 70;
+      } catch {
+        // ignore image errors
+      }
+    }
+
+    doc.setDrawColor(...RULE);
+    doc.setLineWidth(0.5);
+    doc.line(marginX, y, marginX + 240, y);
+    y += 14;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...PRIMARY);
+    doc.text(memo.signOff.lawyerName, marginX, y);
+    y += 14;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...MUTED);
+    doc.text(`Signed ${formatSignedDate(memo.signOff.signedAt)}`, marginX, y);
+    y += 12;
+    doc.text(`${FIRM_NAME} — Approved for client delivery`, marginX, y);
+  }
+
   addFooter();
   doc.save(`${fileBase()}.pdf`);
 }
 
 /* ---------------- DOCX Export ---------------- */
 
-export async function exportMemoAsDocx(memo: { executiveSummary: string; memoMarkdown: string }) {
+export async function exportMemoAsDocx(memo: MemoExportPayload) {
   const inlineToRuns = (text: string, baseOpts: { bold?: boolean; italic?: boolean; size?: number; color?: string } = {}) =>
     parseInline(text).map(
       (r) =>
@@ -529,6 +597,58 @@ export async function exportMemoAsDocx(memo: { executiveSummary: string; memoMar
         break;
       }
     }
+  }
+
+  // Sign-off block (DOCX)
+  if (memo.signOff) {
+    children.push(
+      new Paragraph({
+        children: [],
+        border: { bottom: { color: "1E293B", space: 4, style: BorderStyle.SINGLE, size: 12 } },
+        spacing: { before: 480, after: 240 },
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: "APPROVED & SIGNED OFF", bold: true, size: 22, color: "1E293B" })],
+        spacing: { after: 200 },
+      }),
+    );
+
+    if (memo.signOff.signatureDataUrl) {
+      const img = dataUrlToUint8Array(memo.signOff.signatureDataUrl);
+      if (img) {
+        children.push(
+          new Paragraph({
+            children: [
+              new ImageRun({
+                type: img.type,
+                data: img.bytes,
+                transformation: { width: 220, height: 70 },
+                altText: { title: "Signature", description: `${memo.signOff.lawyerName} signature`, name: "signature" },
+              }),
+            ],
+            spacing: { after: 80 },
+          }),
+        );
+      }
+    }
+
+    children.push(
+      new Paragraph({
+        children: [new TextRun({ text: "_________________________________", size: 20, color: "64748B" })],
+        spacing: { after: 80 },
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: memo.signOff.lawyerName, bold: true, size: 24, color: "1E293B" })],
+        spacing: { after: 40 },
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: `Signed ${formatSignedDate(memo.signOff.signedAt)}`, size: 18, color: "64748B" })],
+        spacing: { after: 40 },
+      }),
+      new Paragraph({
+        children: [new TextRun({ text: `${FIRM_NAME} — Approved for client delivery`, italics: true, size: 18, color: "64748B" })],
+      }),
+    );
   }
 
   const doc = new Document({
