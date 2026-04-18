@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from "react-simple-maps";
+import { geoCentroid } from "d3-geo";
 import { EntityType, PresenceData } from "@/types";
 
 const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
@@ -96,6 +97,10 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dims, setDims] = useState({ width: 800, height: 500 });
+  // Centroid cache: ISO → [lon, lat], populated from geo features as they render
+  const centroidCacheRef = useRef<Record<string, [number, number]>>({});
+  // Bump on cache update so the activeCountry effect re-runs once the cache is ready
+  const [centroidsReady, setCentroidsReady] = useState(0);
 
   // Live camera state — driven by ZoomableGroup (wheel/pinch/drag) AND by click-animation
   const [position, setPosition] = useState<{ coordinates: [number, number]; zoom: number }>({
@@ -126,10 +131,16 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
     });
   }, []);
 
-  // Zoom-to-country on click; reset to world when cleared
+  // Zoom-to-country on click; reset to world when cleared.
+  // Prefer dynamic centroid (works for every country in the geo dataset),
+  // fall back to the curated CENTROIDS table for marker-only countries.
   useEffect(() => {
-    if (activeCountry && CENTROIDS[activeCountry]) {
-      animateTo({ coordinates: CENTROIDS[activeCountry], zoom: COUNTRY_ZOOM });
+    if (activeCountry) {
+      const coords = centroidCacheRef.current[activeCountry] ?? CENTROIDS[activeCountry];
+      if (coords) {
+        animateTo({ coordinates: coords, zoom: COUNTRY_ZOOM });
+      }
+      // If centroids aren't loaded yet, the centroidsReady bump will re-trigger this effect
     } else {
       animateTo({ coordinates: [0, 15], zoom: 1 });
     }
@@ -137,7 +148,7 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
       if (animRef.current) cancelAnimationFrame(animRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeCountry]);
+  }, [activeCountry, centroidsReady]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -209,8 +220,23 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
           onMove={(pos) => setPosition(pos)}
         >
           <Geographies geography={GEO_URL}>
-            {({ geographies }) =>
-              geographies.map((geo) => {
+            {({ geographies }) => {
+              // Populate centroid cache once per dataset load (covers ALL countries on the map)
+              if (geographies.length && Object.keys(centroidCacheRef.current).length < geographies.length) {
+                const next: Record<string, [number, number]> = {};
+                for (const g of geographies) {
+                  const code = getAlpha2(g);
+                  if (!code) continue;
+                  const c = geoCentroid(g as Parameters<typeof geoCentroid>[0]);
+                  if (Number.isFinite(c[0]) && Number.isFinite(c[1])) {
+                    next[code] = [c[0], c[1]];
+                  }
+                }
+                centroidCacheRef.current = next;
+                // Defer state bump out of render
+                queueMicrotask(() => setCentroidsReady((n) => n + 1));
+              }
+              return geographies.map((geo) => {
                 const iso = getAlpha2(geo);
                 const name = getCountryName(geo);
                 return (
@@ -245,8 +271,8 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
                     }}
                   />
                 );
-              })
-            }
+              });
+            }}
           </Geographies>
 
           {/* Employee presence markers — counter-scaled so size adapts to zoom */}
