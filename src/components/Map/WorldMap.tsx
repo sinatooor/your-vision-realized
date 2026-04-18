@@ -99,6 +99,7 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
   const [dims, setDims] = useState({ width: 800, height: 500 });
   // Centroid cache: ISO → [lon, lat], populated from geo features as they render
   const centroidCacheRef = useRef<Record<string, [number, number]>>({});
+  const centroidsBuiltRef = useRef(false);
   // Bump on cache update so the activeCountry effect re-runs once the cache is ready
   const [centroidsReady, setCentroidsReady] = useState(0);
 
@@ -107,28 +108,35 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
     coordinates: [0, 15],
     zoom: 1,
   });
+  // Mirror in a ref so the animation loop can read the latest value WITHOUT
+  // calling setState inside a setState updater (which causes infinite re-renders).
+  const positionRef = useRef(position);
+  positionRef.current = position;
   const animRef = useRef<number | null>(null);
 
   const animateTo = useCallback((target: { coordinates: [number, number]; zoom: number }) => {
     if (animRef.current) cancelAnimationFrame(animRef.current);
+    const from = positionRef.current;
     const start = performance.now();
-    setPosition((from) => {
-      const fromSnapshot = from;
-      const step = (now: number) => {
-        const t = Math.min(1, (now - start) / ZOOM_DURATION);
-        const k = easeInOutCubic(t);
-        setPosition({
-          coordinates: [
-            fromSnapshot.coordinates[0] + (target.coordinates[0] - fromSnapshot.coordinates[0]) * k,
-            fromSnapshot.coordinates[1] + (target.coordinates[1] - fromSnapshot.coordinates[1]) * k,
-          ],
-          zoom: fromSnapshot.zoom + (target.zoom - fromSnapshot.zoom) * k,
-        });
-        if (t < 1) animRef.current = requestAnimationFrame(step);
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / ZOOM_DURATION);
+      const k = easeInOutCubic(t);
+      const next = {
+        coordinates: [
+          from.coordinates[0] + (target.coordinates[0] - from.coordinates[0]) * k,
+          from.coordinates[1] + (target.coordinates[1] - from.coordinates[1]) * k,
+        ] as [number, number],
+        zoom: from.zoom + (target.zoom - from.zoom) * k,
       };
-      animRef.current = requestAnimationFrame(step);
-      return fromSnapshot;
-    });
+      positionRef.current = next;
+      setPosition(next);
+      if (t < 1) {
+        animRef.current = requestAnimationFrame(step);
+      } else {
+        animRef.current = null;
+      }
+    };
+    animRef.current = requestAnimationFrame(step);
   }, []);
 
   // Zoom-to-country on click; reset to world when cleared.
@@ -216,13 +224,15 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
           zoom={position.zoom}
           minZoom={MIN_ZOOM}
           maxZoom={MAX_ZOOM}
-          onMoveEnd={(pos) => setPosition(pos)}
-          onMove={(pos) => setPosition(pos)}
+          onMoveEnd={(pos) => {
+            positionRef.current = pos;
+            setPosition(pos);
+          }}
         >
           <Geographies geography={GEO_URL}>
             {({ geographies }) => {
-              // Populate centroid cache once per dataset load (covers ALL countries on the map)
-              if (geographies.length && Object.keys(centroidCacheRef.current).length < geographies.length) {
+              // Populate centroid cache exactly once per dataset load (covers ALL countries)
+              if (geographies.length && !centroidsBuiltRef.current) {
                 const next: Record<string, [number, number]> = {};
                 for (const g of geographies) {
                   const code = getAlpha2(g);
@@ -233,6 +243,7 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
                   }
                 }
                 centroidCacheRef.current = next;
+                centroidsBuiltRef.current = true;
                 // Defer state bump out of render
                 queueMicrotask(() => setCentroidsReady((n) => n + 1));
               }
