@@ -217,13 +217,17 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
         return prev;
       }
 
+      const seedParams: AnalysisParams = paramsCache[iso]
+        ? { ...paramsCache[iso] }
+        : { ...DEFAULT_CASE_PARAMS };
+
       // If adding a new case, append. Otherwise replace single case with first selection.
       if (prev.length === 0 || isAddingCase) {
         const newCase: ExpansionCase = {
           id: makeCaseId(),
           iso,
           name,
-          params: { ...DEFAULT_CASE_PARAMS },
+          params: seedParams,
         };
         setActiveCaseIdState(newCase.id);
         setActiveCountry({ iso, name });
@@ -237,14 +241,14 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
         id: makeCaseId(),
         iso,
         name,
-        params: { ...DEFAULT_CASE_PARAMS },
+        params: seedParams,
       };
       setActiveCaseIdState(newCase.id);
       setActiveCountry({ iso, name });
       setPanelOpen(true);
       return [newCase];
     });
-  }, [isAddingCase]);
+  }, [isAddingCase, paramsCache]);
 
   const handleClose = useCallback(() => {
     setPanelOpen(false);
