@@ -113,6 +113,11 @@ export default function Overview() {
     handleClose,
     handleRunAnalysis,
     confirmTwinAndContinue,
+    savedExpansions,
+    activeSavedId,
+    loadSavedExpansion,
+    removeSavedExpansion,
+    startNewExpansion,
   } = useAnalysis();
 
   const { company, setCompany, footprint, setFootprint, dataArch, setDataArch } = useCompany();
