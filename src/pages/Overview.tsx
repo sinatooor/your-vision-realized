@@ -205,13 +205,7 @@ export default function Overview() {
             panelOpen={panelOpen}
           />
 
-          <JurisdictionPanel
-            country={activeCountry}
-            presence={activeCountry ? (presenceData[activeCountry.iso] ?? null) : null}
-            onClose={handleClose}
-            onRunAnalysis={handleRunAnalysis}
-            isRunning={isRunning}
-          />
+          <JurisdictionPanel />
 
           {/* AgentStream panel hidden — progress shown via button spinner */}
 

@@ -173,13 +173,7 @@ export default function Index() {
               panelOpen={panelOpen}
             />
 
-            <JurisdictionPanel
-              country={activeCountry}
-              presence={activeCountry ? (presenceData[activeCountry.iso] ?? null) : null}
-              onClose={handleClose}
-              onRunAnalysis={handleRunAnalysis}
-              isRunning={isRunning}
-            />
+            <JurisdictionPanel />
 
             {/* Agent stream below panel */}
             {panelOpen && (events.length > 0 || isRunning) && (
