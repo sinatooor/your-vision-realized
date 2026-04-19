@@ -82,6 +82,16 @@ They are planning a combined cross-border expansion into: ${targets}.
 ${planLines}${crossNote}`;
 }
 
+export interface SavedExpansion {
+  id: string;
+  label: string;
+  companyName: string;
+  createdAt: string;
+  sessionId: string;
+  cases: ExpansionCase[];
+  result: AnalysisResult;
+}
+
 interface AnalysisContextValue {
   presenceData: Record<string, PresenceData>;
   activeCountry: { iso: string; name: string } | null;
@@ -98,6 +108,8 @@ interface AnalysisContextValue {
   isComplete: boolean;
   error: string | null;
   hasNavigatedToResults: boolean;
+  savedExpansions: SavedExpansion[];
+  activeSavedId: string | null;
   markNavigatedToResults: () => void;
   handleCountryClick: (iso: string, name: string) => void;
   handleClose: () => void;
@@ -111,6 +123,9 @@ interface AnalysisContextValue {
   setShowTwinReview: (v: boolean) => void;
   resetAnalysis: () => void;
   updateMemo: (patch: { memoMarkdown?: string; executiveSummary?: string }) => void;
+  loadSavedExpansion: (id: string) => void;
+  removeSavedExpansion: (id: string) => void;
+  startNewExpansion: () => void;
 }
 
 const AnalysisContext = createContext<AnalysisContextValue | null>(null);
