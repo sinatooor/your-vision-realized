@@ -151,6 +151,30 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
   const [activeCaseId, setActiveCaseIdState] = useState<string | null>(null);
   const [isAddingCase, setIsAddingCase] = useState(false);
 
+  // Persistent cache of last-used form values per country ISO, so re-selecting
+  // a country always restores the user's previous inputs instead of resetting
+  // them to defaults.
+  const [paramsCache, setParamsCache] = useState<Record<string, AnalysisParams>>(() => {
+    try {
+      const raw = localStorage.getItem("tg_case_params_cache");
+      return raw ? (JSON.parse(raw) as Record<string, AnalysisParams>) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const writeParamsCache = useCallback((iso: string, params: AnalysisParams) => {
+    setParamsCache((prev) => {
+      const next = { ...prev, [iso]: params };
+      try {
+        localStorage.setItem("tg_case_params_cache", JSON.stringify(next));
+      } catch {
+        /* quota */
+      }
+      return next;
+    });
+  }, []);
+
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [twin, setTwin] = useState<ExpansionTwin | null>(null);
