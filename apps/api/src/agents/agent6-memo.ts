@@ -41,7 +41,14 @@ export async function generateMemo(
   const statuteExcerpts = loadStatuteExcerpts(allRelevantObligations);
   const statuteContext = formatStatuteContext(statuteExcerpts);
 
+  const today = new Date();
+  const todayIso = today.toISOString().slice(0, 10);
+  const todayHuman = today.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+
   const userPrompt = `Write a complete client advisory memo for the following expansion.
+
+## TODAY'S DATE
+${todayHuman} (${todayIso}). Use this date for the memo header, "as of" references, and any time-sensitive language. NEVER invent or assume a different current date.
 
 ## MATTER SUMMARY
 Company: ${twin.company.name}

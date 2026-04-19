@@ -82,6 +82,16 @@ They are planning a combined cross-border expansion into: ${targets}.
 ${planLines}${crossNote}`;
 }
 
+export interface SavedExpansion {
+  id: string;
+  label: string;
+  companyName: string;
+  createdAt: string;
+  sessionId: string;
+  cases: ExpansionCase[];
+  result: AnalysisResult;
+}
+
 interface AnalysisContextValue {
   presenceData: Record<string, PresenceData>;
   activeCountry: { iso: string; name: string } | null;
@@ -98,6 +108,8 @@ interface AnalysisContextValue {
   isComplete: boolean;
   error: string | null;
   hasNavigatedToResults: boolean;
+  savedExpansions: SavedExpansion[];
+  activeSavedId: string | null;
   markNavigatedToResults: () => void;
   handleCountryClick: (iso: string, name: string) => void;
   handleClose: () => void;
@@ -111,6 +123,9 @@ interface AnalysisContextValue {
   setShowTwinReview: (v: boolean) => void;
   resetAnalysis: () => void;
   updateMemo: (patch: { memoMarkdown?: string; executiveSummary?: string }) => void;
+  loadSavedExpansion: (id: string) => void;
+  removeSavedExpansion: (id: string) => void;
+  startNewExpansion: () => void;
 }
 
 const AnalysisContext = createContext<AnalysisContextValue | null>(null);
@@ -141,6 +156,26 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
   const [twin, setTwin] = useState<ExpansionTwin | null>(null);
   const [showTwinReview, setShowTwinReview] = useState(false);
   const [hasNavigatedToResults, setHasNavigatedToResults] = useState(false);
+
+  // Persisted history of completed expansion analyses.
+  const [savedExpansions, setSavedExpansions] = useState<SavedExpansion[]>(() => {
+    try {
+      const raw = localStorage.getItem("tg_saved_expansions");
+      return raw ? (JSON.parse(raw) as SavedExpansion[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [activeSavedId, setActiveSavedId] = useState<string | null>(null);
+
+  const persistSaved = useCallback((next: SavedExpansion[]) => {
+    setSavedExpansions(next);
+    try {
+      localStorage.setItem("tg_saved_expansions", JSON.stringify(next));
+    } catch {
+      /* quota */
+    }
+  }, []);
 
   const markNavigatedToResults = useCallback(() => setHasNavigatedToResults(true), []);
 
@@ -289,6 +324,32 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
     })();
   }, [isComplete, sessionId]);
 
+  // Persist a saved expansion entry whenever a result lands for the current session.
+  useEffect(() => {
+    if (!result || !sessionId || cases.length === 0) return;
+    const label = cases.map((c) => c.name).join(" + ");
+    setSavedExpansions((prev) => {
+      const idx = prev.findIndex((s) => s.sessionId === sessionId);
+      const entry: SavedExpansion = {
+        id: prev[idx]?.id ?? `exp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`,
+        label,
+        companyName: company.name,
+        createdAt: prev[idx]?.createdAt ?? new Date().toISOString(),
+        sessionId,
+        cases,
+        result,
+      };
+      const next = idx >= 0 ? prev.map((s, i) => (i === idx ? entry : s)) : [entry, ...prev];
+      try {
+        localStorage.setItem("tg_saved_expansions", JSON.stringify(next));
+      } catch {
+        /* quota */
+      }
+      setActiveSavedId(entry.id);
+      return next;
+    });
+  }, [result, sessionId, cases, company.name]);
+
   const confirmTwinAndContinue = useCallback(async () => {
     if (sessionId) await confirmTwin(sessionId, twin ?? undefined).catch(() => null);
     setShowTwinReview(false);
@@ -305,11 +366,69 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
             }
           : prev,
       );
+      // Sync into the active saved expansion so it persists across reloads / switches.
+      setSavedExpansions((prev) => {
+        if (!prev.length) return prev;
+        const next = prev.map((s) =>
+          s.id === activeSavedId
+            ? {
+                ...s,
+                result: {
+                  ...s.result,
+                  memoMarkdown: patch.memoMarkdown ?? s.result.memoMarkdown,
+                  executiveSummary: patch.executiveSummary ?? s.result.executiveSummary,
+                },
+              }
+            : s,
+        );
+        try {
+          localStorage.setItem("tg_saved_expansions", JSON.stringify(next));
+        } catch {
+          /* quota */
+        }
+        return next;
+      });
     },
-    [],
+    [activeSavedId],
   );
 
-  const resetAnalysis = useCallback(() => {
+  const loadSavedExpansion = useCallback(
+    (id: string) => {
+      const entry = savedExpansions.find((s) => s.id === id);
+      if (!entry) return;
+      resetStream();
+      setSessionId(entry.sessionId);
+      setResult(entry.result);
+      setCases(entry.cases);
+      setActiveCaseIdState(entry.cases[0]?.id ?? null);
+      setActiveCountry(entry.cases[0] ? { iso: entry.cases[0].iso, name: entry.cases[0].name } : null);
+      setPanelOpen(false);
+      setIsAddingCase(false);
+      setShowTwinReview(false);
+      setTwin(null);
+      setHasNavigatedToResults(true);
+      setActiveSavedId(entry.id);
+    },
+    [savedExpansions, resetStream],
+  );
+
+  const removeSavedExpansion = useCallback(
+    (id: string) => {
+      const next = savedExpansions.filter((s) => s.id !== id);
+      persistSaved(next);
+      if (activeSavedId === id) {
+        setActiveSavedId(null);
+        setResult(null);
+        setSessionId(null);
+        setCases([]);
+        setActiveCaseIdState(null);
+        setActiveCountry(null);
+      }
+    },
+    [savedExpansions, activeSavedId, persistSaved],
+  );
+
+  const startNewExpansion = useCallback(() => {
     resetStream();
     setResult(null);
     setTwin(null);
@@ -321,7 +440,12 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
     setActiveCaseIdState(null);
     setIsAddingCase(false);
     setHasNavigatedToResults(false);
+    setActiveSavedId(null);
   }, [resetStream]);
+
+  const resetAnalysis = useCallback(() => {
+    startNewExpansion();
+  }, [startNewExpansion]);
 
   return (
     <AnalysisContext.Provider
@@ -341,6 +465,8 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
         isComplete,
         error,
         hasNavigatedToResults,
+        savedExpansions,
+        activeSavedId,
         markNavigatedToResults,
         handleCountryClick,
         handleClose,
@@ -354,6 +480,9 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
         setShowTwinReview,
         resetAnalysis,
         updateMemo,
+        loadSavedExpansion,
+        removeSavedExpansion,
+        startNewExpansion,
       }}
     >
       {children}
