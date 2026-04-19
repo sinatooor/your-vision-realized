@@ -87,8 +87,14 @@ export async function runMemoChat(
 ): Promise<MemoChatResult> {
   const chatContext = buildChatContext(history);
   const attachmentContext = buildAttachmentContext(attachments);
+  const today = new Date();
+  const todayHuman = today.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  const todayIso = today.toISOString().slice(0, 10);
 
-  const userPrompt = `## CURRENT MEMO (the source of truth — edit THIS)
+  const userPrompt = `## TODAY'S DATE
+${todayHuman} (${todayIso}). If the memo references a current/"as of" date, use this. Never invent a different date.
+
+## CURRENT MEMO (the source of truth — edit THIS)
 
 ${currentMemoMarkdown}
 ${attachmentContext ? `\n## SUPPORTING DOCUMENTS (context only — do not copy verbatim unless directly relevant)\n\n${attachmentContext}\n` : ""}
