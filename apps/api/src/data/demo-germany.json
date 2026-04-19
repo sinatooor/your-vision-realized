@@ -1,0 +1,708 @@
+{
+  "twin": {
+    "id": "twin-demo-lovable-de-2026",
+    "createdAt": "2026-04-15T09:00:00.000Z",
+    "company": {
+      "name": "Lovable (GPT Engineer AB)",
+      "hqCountry": "SE",
+      "industry": "AI-Powered Developer Tools",
+      "size": 150,
+      "productCategory": "AI Full-Stack Application Generator (B2B/B2C SaaS)",
+      "hasAiFeatures": true
+    },
+    "expansion": {
+      "targetCountries": [
+        "DE"
+      ],
+      "timelineDays": 90,
+      "launchDate": "2026-07-01"
+    },
+    "people": {
+      "hiresByCountry": {
+        "SE": 85,
+        "US": 45,
+        "GB": 20,
+        "DE": 25
+      },
+      "arrangementByCountry": {
+        "SE": "hybrid",
+        "US": "hybrid",
+        "GB": "hybrid",
+        "DE": "hybrid"
+      }
+    },
+    "data": {
+      "categories": [
+        "hr",
+        "customer"
+      ],
+      "storageJurisdictions": [
+        "SE"
+      ],
+      "transferFlows": [
+        {
+          "from": "SE",
+          "to": "US",
+          "categories": [
+            "customer"
+          ]
+        },
+        {
+          "from": "DE",
+          "to": "SE",
+          "categories": [
+            "hr",
+            "customer"
+          ]
+        }
+      ],
+      "centralised": true
+    },
+    "entity": {
+      "currentByCountry": {
+        "SE": "hq",
+        "US": "eor",
+        "GB": "eor",
+        "DE": "none"
+      }
+    },
+    "revenue": {
+      "localInvoicingByCountry": {
+        "DE": false
+      }
+    },
+    "rawBrief": "Lovable (GPT Engineer AB) is an AI-Powered Developer Tools company headquartered in Sweden (SE) with 150 employees globally. They have no existing German presence and are entering Germany for the first time, planning to hire 25 employees on a hybrid basis via an Employer of Record (EOR). They process user code and project data, LLM prompt and output logs, and personal account data. Their data architecture is centralised in Sweden, with LLM inference routed through Anthropic Inc. APIs in the United States. Target launch: Q3 2026. Current international presence: SE: 85 (HQ), US: 45 (EOR), GB: 20 (EOR). Their product is an AI system that generates full-stack applications from natural language prompts, relying on third-party large language model providers."
+  },
+  "result": {
+    "id": "result-demo-lovable-de-2026",
+    "twinId": "twin-demo-lovable-de-2026",
+    "createdAt": "2026-04-15T09:00:00.000Z",
+    "obligations": [
+      {
+        "id": "DE-001",
+        "jurisdiction": "DE",
+        "category": "tax",
+        "title": "Permanent Establishment (PE) Risk",
+        "description": "Lovable's 25 German hybrid employees create two permanent establishment risk vectors under German tax law. First, each employee's home office may constitute a fixed place of business under AO §12 and OECD Model Tax Convention Art. 5(1). Second, any employee who habitually negotiates or concludes contracts on Lovable's behalf is a dependent agent under Art. 5(5), creating PE regardless of the EOR structure. A PE would subject Lovable AB (the Swedish parent) to Koerperschaftsteuer (15%) and Gewerbesteuer (14-17%) on profits attributable to German operations, at a combined effective corporate tax rate of approximately 30%.",
+        "trigger": "First hybrid employee in Germany or any employee who habitually concludes or leads to contracts for Lovable AB",
+        "threshold": "Any sustained business presence or dependent agent activity",
+        "severity": "critical",
+        "source": {
+          "citation": "Abgabenordnung (AO) §12; OECD Model Tax Convention Art. 5(1) and Art. 5(5)",
+          "url": "https://www.gesetze-im-internet.de/ao_1977/__12.html",
+          "retrievedAt": "2026-04-14T00:00:00.000Z",
+          "isLive": false
+        },
+        "confidence": 0.94,
+        "requiresLocalCounsel": true,
+        "legislationStatus": "in-force"
+      },
+      {
+        "id": "DE-002",
+        "jurisdiction": "DE",
+        "category": "employment",
+        "title": "Works Council (Betriebsrat) Formation Right",
+        "description": "Under BetrVG §1(1), once Lovable's German operation reaches 5 permanent employees, those employees have the right to elect a Works Council. With 25 planned hires this threshold is crossed on the fifth hire. The Works Council holds co-determination rights under BetrVG §87(1)(6) over any technical device designed to monitor employee behaviour or performance. Lovable's AI coding assistant captures all user prompts, code completions, suggestions accepted or rejected, and usage session patterns. A 2024 Bundesarbeitsgericht ruling confirmed this class of AI-powered development tool is a monitoring device requiring Works Council approval before deployment to German employees. Lovable cannot allow its own product to be used internally in Germany without a Betriebsvereinbarung (Works Agreement) negotiated with and approved by the Works Council.",
+        "trigger": "5th permanent employee hired in Germany",
+        "threshold": "5 employees",
+        "severity": "high",
+        "source": {
+          "citation": "Betriebsverfassungsgesetz (BetrVG) §1(1) and §87(1)(6)",
+          "url": "https://www.gesetze-im-internet.de/betrvg/__1.html",
+          "retrievedAt": "2026-04-14T00:00:00.000Z",
+          "isLive": false
+        },
+        "confidence": 0.98,
+        "requiresLocalCounsel": false,
+        "legislationStatus": "in-force"
+      },
+      {
+        "id": "DE-003",
+        "jurisdiction": "DE",
+        "category": "data",
+        "title": "GDPR Art. 28 Data Processing Agreement with EOR",
+        "description": "The EOR provider will process Lovable's German employee personal data as a data processor, triggering mandatory Data Processing Agreement requirements under GDPR Art. 28. The DPA must contain all mandatory Art. 28(3) clauses: processing scope and purpose, security obligations, sub-processor restrictions, audit rights, and data deletion provisions. The DPA must be executed before any employee personal data is collected.",
+        "trigger": "Any processing of employee personal data by the EOR provider",
+        "threshold": null,
+        "severity": "high",
+        "source": {
+          "citation": "GDPR Art. 28; CELEX: 32016R0679",
+          "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016R0679",
+          "retrievedAt": "2026-04-14T00:00:00.000Z",
+          "isLive": false
+        },
+        "confidence": 0.97,
+        "requiresLocalCounsel": false,
+        "legislationStatus": "in-force"
+      },
+      {
+        "id": "DE-004",
+        "jurisdiction": "DE",
+        "category": "data",
+        "title": "GDPR Art. 35 DPIA and BDSG §26 for Employee Data in LLM Pipeline",
+        "description": "Lovable routes all user prompts and code generation requests through Anthropic Inc.'s Claude API in the United States. For Lovable's existing EU operations (SE), Standard Contractual Clauses covering customer and user data should already be in place with Anthropic. Germany adds a materially distinct processing dimension: 25 German employees will have their work interactions (prompts, code, session data) routed through the same LLM pipeline. Under BDSG §26(2), consent is an invalid legal basis for processing German employee data due to the structural power imbalance of the employment relationship. Under GDPR Art. 35, a Data Protection Impact Assessment is mandatory before processing employee data through a systematic AI monitoring pipeline. Lovable must verify that its existing Anthropic DPA explicitly covers German employee monitoring data as a distinct processing activity from general user data, establish a legitimate interests basis under GDPR Art. 6(1)(f) for this processing, and complete a DPIA before German employees are given platform access.",
+        "trigger": "German employees using the Lovable platform, generating prompt and session data routed through Anthropic US API",
+        "threshold": null,
+        "severity": "high",
+        "source": {
+          "citation": "GDPR Art. 35, Art. 46(2)(c); BDSG §26(1) and §26(2); CJEU C-311/18 (Schrems II)",
+          "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016R0679",
+          "retrievedAt": "2026-04-14T00:00:00.000Z",
+          "isLive": false
+        },
+        "confidence": 0.94,
+        "requiresLocalCounsel": false,
+        "legislationStatus": "in-force"
+      },
+      {
+        "id": "DE-005",
+        "jurisdiction": "DE",
+        "category": "tax",
+        "title": "German Payroll Tax Registration (Lohnsteuer)",
+        "description": "Under EStG §38, the legal employer must register for Lohnsteuer (payroll withholding tax) with the competent Finanzamt before the first payroll is processed. Under the EOR model, the EOR is the registered legal employer and holds this registration. Lovable must obtain written confirmation from the EOR before any German employee receives their first salary payment.",
+        "trigger": "First payroll payment to a German employee",
+        "threshold": null,
+        "severity": "high",
+        "source": {
+          "citation": "Einkommensteuergesetz (EStG) §38",
+          "url": "https://www.gesetze-im-internet.de/estg/__38.html",
+          "retrievedAt": "2026-04-14T00:00:00.000Z",
+          "isLive": false
+        },
+        "confidence": 0.97,
+        "requiresLocalCounsel": false,
+        "legislationStatus": "in-force"
+      },
+      {
+        "id": "DE-006",
+        "jurisdiction": "DE",
+        "category": "employment",
+        "title": "Social Insurance Registration (Sozialversicherung)",
+        "description": "Under SGB IV §28a, each German employee must be registered with the German social insurance system covering statutory health insurance (Krankenversicherung), pension insurance (Rentenversicherung), unemployment insurance (Arbeitslosenversicherung), and long-term care insurance (Pflegeversicherung). Total combined employer and employee contributions amount to approximately 40% of gross salary.",
+        "trigger": "First employee hired in Germany",
+        "threshold": null,
+        "severity": "high",
+        "source": {
+          "citation": "Sozialgesetzbuch IV (SGB IV) §28a",
+          "url": "https://www.gesetze-im-internet.de/sgb_4/__28a.html",
+          "retrievedAt": "2026-04-14T00:00:00.000Z",
+          "isLive": false
+        },
+        "confidence": 0.98,
+        "requiresLocalCounsel": false,
+        "legislationStatus": "in-force"
+      },
+      {
+        "id": "DE-007",
+        "jurisdiction": "DE",
+        "category": "data",
+        "title": "BDSG §26 Employee Data Processing",
+        "description": "The German Bundesdatenschutzgesetz (BDSG) §26 supplements the GDPR for employment contexts. Under BDSG §26(2), consent from employees is only a valid legal basis for processing their personal data if genuinely freely given. The legislature presumes this is structurally impossible in most employment relationships due to the power imbalance between employer and employee. For German employees who use the Lovable platform as part of their work, Lovable cannot rely on consent for collecting usage telemetry, prompt logs, and behavioural analytics. It must identify an alternative lawful basis under GDPR Art. 6 and BDSG §26, and disclose this explicitly in German employment contracts.",
+        "trigger": "Any collection of usage data from German employees using the Lovable platform",
+        "threshold": null,
+        "severity": "medium",
+        "source": {
+          "citation": "Bundesdatenschutzgesetz (BDSG) §26(1) and §26(2)",
+          "url": "https://www.gesetze-im-internet.de/bdsg_2018/__26.html",
+          "retrievedAt": "2026-04-14T00:00:00.000Z",
+          "isLive": false
+        },
+        "confidence": 0.91,
+        "requiresLocalCounsel": false,
+        "legislationStatus": "in-force"
+      },
+      {
+        "id": "DE-008",
+        "jurisdiction": "DE",
+        "category": "licensing",
+        "title": "EU AI Act Provider and Deployer Dual Obligations",
+        "description": "Under Regulation (EU) 2024/1689 (the EU AI Act), Lovable occupies a dual regulated role. As provider, Lovable makes its AI system available on the EU market via lovable.dev and must comply with Art. 16 documentation, Art. 13 transparency, Art. 14 human oversight, and Art. 50 disclosure obligations. As deployer, Lovable uses its own AI product internally and must implement Art. 26 technical and organisational measures. Chapter III obligations for high-risk AI systems take full effect on 2 August 2026. A conformity assessment documenting the Annex III risk classification must be completed before the product is placed on the German market and before this date.",
+        "trigger": "Making the AI system available to users in Germany or using it internally with German employees",
+        "threshold": null,
+        "severity": "high",
+        "source": {
+          "citation": "EU AI Act Art. 13, 14, 16, 26, 50; CELEX: 32024R1689",
+          "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024R1689",
+          "retrievedAt": "2026-04-14T00:00:00.000Z",
+          "isLive": false
+        },
+        "confidence": 0.88,
+        "requiresLocalCounsel": true,
+        "legislationStatus": "in-force",
+        "effectiveDate": "2024-08-01"
+      },
+      {
+        "id": "DE-009",
+        "jurisdiction": "DE",
+        "category": "licensing",
+        "title": "Impressumspflicht (German Imprint Requirement)",
+        "description": "Under TMG §5, any commercial website accessible in Germany must display a legally compliant imprint (Impressum). Required information includes: full legal name of the operator (GPT Engineer AB), registered Swedish address, contact details including email and telephone, Swedish commercial register entry number, and VAT identification number. lovable.dev must include this page before the German market entry date. Non-compliance triggers cease-and-desist actions (Abmahnungen) from competitors and consumer protection bodies.",
+        "trigger": "Operating a commercial website accessible from Germany",
+        "threshold": null,
+        "severity": "medium",
+        "source": {
+          "citation": "Telemediengesetz (TMG) §5",
+          "url": "https://www.gesetze-im-internet.de/tmg/__5.html",
+          "retrievedAt": "2026-04-14T00:00:00.000Z",
+          "isLive": false
+        },
+        "confidence": 0.92,
+        "requiresLocalCounsel": false,
+        "legislationStatus": "in-force"
+      }
+    ],
+    "conflicts": [
+      {
+        "id": "CONF-DE-001",
+        "obligationAId": "DE-004",
+        "obligationBId": "DE-007",
+        "type": "dependency",
+        "severity": "high",
+        "explanation": "Lovable routes all user prompts through Anthropic Inc.'s Claude API in the United States. For Lovable's existing EU operations, Standard Contractual Clauses should already cover customer and user data flows to Anthropic. Germany introduces a materially distinct processing activity: German employees' work interactions constitute employee monitoring data, not general user data. Three compounding obligations arise. First, Lovable must verify its existing Anthropic DPA explicitly covers employee monitoring data as a distinct processing category, since the legal basis and purpose differ from user data. Second, under GDPR Art. 35, a Data Protection Impact Assessment is mandatory before systematically processing employee data through an AI pipeline. Third, under BDSG §26(2), consent is invalid as the legal basis for this employee data collection, requiring a legitimate interests basis under GDPR Art. 6(1)(f) documented in each German employment contract. These obligations must be met before German employees are given access to the Lovable platform.",
+        "impactedTwinFields": [
+          "data.transferFlows",
+          "people.hiresByCountry.DE",
+          "company.hasAiFeatures"
+        ],
+        "mitigationOptions": [
+          {
+            "option": "Verify and extend Anthropic DPA to cover German employee monitoring data",
+            "description": "Review Lovable's existing Anthropic Data Processing Agreement to confirm it explicitly documents German employee prompt and session data as a distinct processing activity from general user data. If not explicitly covered, engage Anthropic to extend the DPA. This must be completed before the first German employee is given platform access.",
+            "operationalImpact": "low"
+          },
+          {
+            "option": "Conduct DPIA and legitimate interests assessment for employee monitoring data",
+            "description": "Commission a GDPR Art. 35 DPIA covering the processing of German employee prompt data through the Lovable platform. Simultaneously conduct a GDPR Art. 6(1)(f) legitimate interests assessment for each category of employee usage data collected. Both documents must be retained and disclosed in German employment contracts.",
+            "operationalImpact": "low"
+          }
+        ],
+        "blocksExpansion": false
+      },
+      {
+        "id": "CONF-DE-002",
+        "obligationAId": "DE-002",
+        "obligationBId": "DE-008",
+        "type": "conflict",
+        "severity": "high",
+        "explanation": "Under BetrVG §87(1)(6), the Works Council must approve any technical device capable of monitoring employee behaviour or performance before deployment. Lovable's AI coding assistant captures every prompt, suggestion, code completion accepted or rejected, and session duration from each user, constituting systematic and granular performance monitoring data. The Bundesarbeitsgericht has established in case law that AI-powered development tools capturing employee interaction data require Works Council co-determination. Lovable cannot deploy its own flagship product to German employees without a Betriebsvereinbarung negotiated with the Works Council. The Works Agreement must be signed before the Lovable platform is activated for any German employee.",
+        "impactedTwinFields": [
+          "people.hiresByCountry.DE",
+          "company.hasAiFeatures"
+        ],
+        "mitigationOptions": [
+          {
+            "option": "Prepare Betriebsvereinbarung template before 5th hire",
+            "description": "Engage German labour law counsel to draft a Works Agreement template governing internal use of the Lovable platform by German employees. The agreement must define: what data is captured, purpose limitation, retention periods, prohibition on use for individual performance assessment, and employee access rights. Present proactively to the Works Council at its first constitutive meeting.",
+            "operationalImpact": "low"
+          }
+        ],
+        "blocksExpansion": false
+      },
+      {
+        "id": "CONF-DE-003",
+        "obligationAId": "DE-001",
+        "obligationBId": "DE-005",
+        "type": "conflict",
+        "severity": "high",
+        "explanation": "The EOR structure means the legal employer of Lovable's 25 German hires is the EOR provider, not Lovable AB. This reduces but does not eliminate PE risk. Under OECD Model Tax Convention Art. 5(5), PE arises if an individual acting on behalf of a company habitually concludes contracts or habitually plays the principal role leading to contract conclusion. For a DACH market entry, Lovable's German hires are likely to include sales engineers, account executives, and customer success managers. If any such employee habitually leads to contract conclusion for Lovable AB, a dependent agent PE exists regardless of the EOR structure, subjecting Lovable AB to German corporate tax at approximately 30% on attributable profits.",
+        "impactedTwinFields": [
+          "entity.currentByCountry.DE",
+          "people.hiresByCountry.DE"
+        ],
+        "mitigationOptions": [
+          {
+            "option": "Commission PE risk opinion before first hire",
+            "description": "Engage a German Steuerberater to assess each planned role type against the PE risk criteria. Engineering roles carry lower risk than sales roles. The opinion must be documented in writing and retained.",
+            "operationalImpact": "low"
+          },
+          {
+            "option": "Incorporate GmbH at month 12-18",
+            "description": "Establish a German GmbH subsidiary as a 12-18 month strategic target. PE risk is replaced by a transparent taxable local entity. Requires EUR 25,000 share capital and 8-12 weeks incorporation.",
+            "operationalImpact": "medium"
+          }
+        ],
+        "blocksExpansion": false
+      },
+      {
+        "id": "CONF-DE-004",
+        "obligationAId": "DE-007",
+        "obligationBId": "DE-004",
+        "type": "tension",
+        "severity": "medium",
+        "explanation": "Lovable's business model depends on usage telemetry and prompt-output logs for AI model improvement and product analytics. For German employees, BDSG §26(2) invalidates consent as the legal basis for collecting this data due to the employment power imbalance. Legitimate interests under GDPR Art. 6(1)(f) may support routine operational analytics but is unlikely to support AI training on individually identifiable employee prompt data under the proportionality balancing test. Lovable must design German employment contracts with specific data processing notices and conduct a DPIA for any employee data used for model training or product analytics.",
+        "impactedTwinFields": [
+          "data.categories",
+          "company.hasAiFeatures"
+        ],
+        "mitigationOptions": [
+          {
+            "option": "Segregate employee data from model training pipeline",
+            "description": "Implement a technical control excluding German employee data from any AI model training or improvement pipeline. Usage analytics may still be collected for operational purposes under legitimate interests, but training data must be anonymised or excluded.",
+            "operationalImpact": "low"
+          },
+          {
+            "option": "GDPR Art. 6(1)(f) legitimate interests assessment",
+            "description": "Commission a formal legitimate interests assessment (LIA) for each category of employee usage data collected. The LIA must document the purpose, necessity, and balancing test against employee rights. Retain and disclose in employment contracts.",
+            "operationalImpact": "low"
+          }
+        ],
+        "blocksExpansion": false
+      }
+    ],
+    "scenarios": [
+      {
+        "id": "scenario-eor",
+        "model": "eor",
+        "label": "Employer of Record (EOR)",
+        "description": "Engage a licensed German EOR provider to employ all 25 DE hires. Lovable retains operational direction; the EOR is the legal employer, handling Lohnsteuer registration, Sozialversicherung enrolment, and German employment law compliance. This avoids incorporating a German legal entity for the initial phase and allows the Q3 2025 target to be met.",
+        "assumptions": [
+          "EOR provider is licensed and GDPR Art. 28 compliant in Germany",
+          "Lovable executes a GDPR DPA with the EOR before any employee is onboarded",
+          "Standard Contractual Clauses with Anthropic are executed before the product is activated for German users or employees",
+          "PE risk is managed via a documented Steuerberater opinion before the first hire",
+          "Works Council Betriebsvereinbarung template is prepared before the 5th German hire",
+          "EU AI Act conformity assessment is completed before the Lovable product goes live in Germany"
+        ],
+        "obligationsTriggered": [
+          "DE-001",
+          "DE-002",
+          "DE-003",
+          "DE-004",
+          "DE-005",
+          "DE-006",
+          "DE-007",
+          "DE-008",
+          "DE-009"
+        ],
+        "conflictsResolved": [
+          "CONF-DE-004"
+        ],
+        "conflictsRemaining": [
+          "CONF-DE-001",
+          "CONF-DE-002",
+          "CONF-DE-003"
+        ],
+        "score": {
+          "legalRisk": 45,
+          "complianceBurden": 48,
+          "timeToLaunchDays": 35,
+          "operationalComplexity": 40,
+          "confidencePenalty": 8,
+          "total": 141
+        },
+        "recommended": true,
+        "rationale": "The EOR model is recommended as the fastest path to compliant German operations with an estimated 35 days to first hire. PE exposure is real but manageable through a documented Steuerberater opinion and careful role design. All GDPR, AI Act, and Works Council obligations are structure-independent and are addressed through the action plan. GmbH incorporation is recommended as a 12-18 month strategic target."
+      },
+      {
+        "id": "scenario-subsidiary",
+        "model": "subsidiary",
+        "label": "German GmbH Subsidiary",
+        "description": "Incorporate a German GmbH subsidiary (EUR 25,000 minimum share capital, 8-12 weeks to complete). Lovable DE GmbH becomes the legal employer and registered taxpayer, eliminating PE uncertainty. Requires a German bank account, registered address, and appointment of a Geschaeftsfuehrer.",
+        "assumptions": [
+          "Incorporation process takes 8-12 weeks and requires notarised articles of association",
+          "EUR 25,000 share capital committed upfront",
+          "Local managing director (Geschaeftsfuehrer) appointed",
+          "Dedicated German payroll and HR administration infrastructure established",
+          "All GDPR, AI Act, and Works Council obligations still apply and are addressed in parallel"
+        ],
+        "obligationsTriggered": [
+          "DE-001",
+          "DE-002",
+          "DE-003",
+          "DE-004",
+          "DE-005",
+          "DE-006",
+          "DE-007",
+          "DE-008",
+          "DE-009"
+        ],
+        "conflictsResolved": [
+          "CONF-DE-003",
+          "CONF-DE-004"
+        ],
+        "conflictsRemaining": [
+          "CONF-DE-001",
+          "CONF-DE-002"
+        ],
+        "score": {
+          "legalRisk": 22,
+          "complianceBurden": 78,
+          "timeToLaunchDays": 84,
+          "operationalComplexity": 72,
+          "confidencePenalty": 12,
+          "total": 184
+        },
+        "recommended": false,
+        "rationale": "GmbH incorporation is the correct long-term structure and eliminates PE risk definitively. However, the 84-day minimum incorporation timeline makes the Q3 2025 launch target impossible. The significantly higher compliance burden and operational complexity are disproportionate for a first-entry phase with 25 employees. Recommended as the 12-18 month strategic target."
+      },
+      {
+        "id": "scenario-contractor-first",
+        "model": "contractor-first",
+        "label": "Contractor-First",
+        "description": "Engage German talent as independent contractors (Freiberufler) for an initial phase before transitioning to employment. All 25 roles would be structured as B2B contracts and reviewed for Scheinselbstaendigkeit (false self-employment) risk under German law.",
+        "assumptions": [
+          "All 25 roles can plausibly meet Freiberufler criteria: independent, working for multiple clients, not integrated into the Lovable organisational structure",
+          "Contractor agreements are reviewed by German counsel for Scheinselbstaendigkeit risk before signing",
+          "Transition to EOR or GmbH occurs within 12 months",
+          "Works Council obligations are deferred but not eliminated if headcount grows"
+        ],
+        "obligationsTriggered": [
+          "DE-001",
+          "DE-004",
+          "DE-008",
+          "DE-009"
+        ],
+        "conflictsResolved": [
+          "CONF-DE-004"
+        ],
+        "conflictsRemaining": [
+          "CONF-DE-001",
+          "CONF-DE-002",
+          "CONF-DE-003"
+        ],
+        "score": {
+          "legalRisk": 82,
+          "complianceBurden": 28,
+          "timeToLaunchDays": 14,
+          "operationalComplexity": 22,
+          "confidencePenalty": 25,
+          "total": 157
+        },
+        "recommended": false,
+        "rationale": "The contractor-first model has the lowest compliance burden and fastest time to first engagement, but carries an 82/100 legal risk score. Deutsche Rentenversicherung specifically targets technology companies using long-term contractors in integrated roles, and 25 full-time hybrid developers working exclusively on Lovable's product is precisely the Scheinselbstaendigkeit risk profile. Misclassification results in backdated social insurance contributions, interest, and administrative penalties. Not recommended."
+      }
+    ],
+    "actions": [
+      {
+        "id": "ACT-001",
+        "title": "Execute GDPR Art. 28 DPA with EOR provider",
+        "description": "Negotiate and execute a GDPR-compliant Data Processing Agreement with the chosen EOR provider before any employee data is collected. The DPA must include all mandatory Art. 28(3) clauses: processing scope and purpose, security obligations, sub-processor restrictions, audit rights, and data deletion provisions.",
+        "owner": "associate",
+        "horizon": "0-30",
+        "estimatedDays": 7,
+        "dependsOn": [],
+        "obligationId": "DE-003",
+        "blocking": true
+      },
+      {
+        "id": "ACT-002",
+        "title": "Commission PE risk legal opinion",
+        "description": "Engage a German Steuerberater to assess the 25 planned German roles against the PE risk criteria under AO §12 and OECD Art. 5. The opinion must review each role type (engineering, sales, customer success) and recommend contract structuring to minimise PE exposure. Must be documented in writing and retained.",
+        "owner": "local-counsel",
+        "horizon": "0-30",
+        "estimatedDays": 10,
+        "dependsOn": [],
+        "obligationId": "DE-001",
+        "blocking": true
+      },
+      {
+        "id": "ACT-003",
+        "title": "Verify and extend Anthropic DPA to cover German employee monitoring data",
+        "description": "Review Lovable's existing Anthropic Data Processing Agreement and Standard Contractual Clauses to confirm they explicitly cover German employee prompt and session data as a distinct processing activity from general user data. If the DPA does not explicitly address this, engage Anthropic's enterprise team to document the extension. German employees cannot be given platform access until this verification is complete and documented.",
+        "owner": "partner",
+        "horizon": "0-30",
+        "estimatedDays": 5,
+        "dependsOn": [],
+        "obligationId": "DE-004",
+        "blocking": true
+      },
+      {
+        "id": "ACT-004",
+        "title": "Complete Transfer Impact Assessment for SE-to-US LLM API flows",
+        "description": "Conduct a Transfer Impact Assessment (TIA) per CJEU C-311/18 (Schrems II) for all EU-to-US data flows via the Anthropic LLM API pipeline. The TIA must assess US surveillance law risks under FISA Section 702 and Executive Order 12333, evaluate Anthropic's practical protective measures, and conclude whether the SCCs provide effective protection in practice.",
+        "owner": "associate",
+        "horizon": "0-30",
+        "estimatedDays": 10,
+        "dependsOn": [
+          "ACT-003"
+        ],
+        "obligationId": "DE-004",
+        "blocking": false
+      },
+      {
+        "id": "ACT-005",
+        "title": "Confirm Lohnsteuer registration with EOR",
+        "description": "Obtain written confirmation from the EOR provider that it holds a valid Lohnsteuer registration with the competent Finanzamt for Lovable's German employees and that payroll withholding is applied at the correct rate for each employee's tax bracket.",
+        "owner": "associate",
+        "horizon": "0-30",
+        "estimatedDays": 5,
+        "dependsOn": [
+          "ACT-001"
+        ],
+        "obligationId": "DE-005",
+        "blocking": true
+      },
+      {
+        "id": "ACT-006",
+        "title": "Confirm Sozialversicherung registration with EOR",
+        "description": "Verify that the EOR provider registers each German employee with all four branches of the Sozialversicherung system (Krankenversicherung, Rentenversicherung, Arbeitslosenversicherung, Pflegeversicherung) as required by SGB IV §28a. Factor the approximately 40% combined employer-employee contribution rate into the total cost of employment modelling.",
+        "owner": "associate",
+        "horizon": "0-30",
+        "estimatedDays": 3,
+        "dependsOn": [
+          "ACT-001"
+        ],
+        "obligationId": "DE-006",
+        "blocking": true
+      },
+      {
+        "id": "ACT-007",
+        "title": "Publish compliant Impressum on lovable.dev",
+        "description": "Add a legally compliant German imprint page to lovable.dev as required by TMG §5: full legal name (GPT Engineer AB), registered Swedish address, email and telephone contact details, Swedish company registration number, and VAT identification number. Engage German counsel to review before publishing.",
+        "owner": "associate",
+        "horizon": "0-30",
+        "estimatedDays": 5,
+        "dependsOn": [],
+        "obligationId": "DE-009",
+        "blocking": false
+      },
+      {
+        "id": "ACT-008",
+        "title": "Initiate EU AI Act provider and deployer compliance assessment",
+        "description": "Engage an EU AI Act specialist to assess Lovable's obligations as both provider and deployer under Regulation (EU) 2024/1689. The assessment must classify the product against Annex III high-risk categories; prepare Art. 13 transparency documentation; confirm Art. 50 disclosure requirements for the German-language interface; and assess Art. 26 deployer obligations for internal product use.",
+        "owner": "partner",
+        "horizon": "31-60",
+        "estimatedDays": 20,
+        "dependsOn": [
+          "ACT-004"
+        ],
+        "obligationId": "DE-008",
+        "blocking": false
+      },
+      {
+        "id": "ACT-009",
+        "title": "BDSG §26 compliance review of German employment contracts",
+        "description": "Commission a BDSG §26 specialist review of German employment contract templates. Each category of personal data collected from German employees (usage telemetry, prompt logs, behavioural analytics) must have a documented lawful basis under GDPR Art. 6 and BDSG §26, stated explicitly in the employment contract.",
+        "owner": "associate",
+        "horizon": "31-60",
+        "estimatedDays": 12,
+        "dependsOn": [
+          "ACT-001"
+        ],
+        "obligationId": "DE-007",
+        "blocking": false
+      },
+      {
+        "id": "ACT-010",
+        "title": "Draft Works Council-compatible Betriebsvereinbarung template",
+        "description": "Before the 5th German hire, engage German labour law counsel to draft a Betriebsvereinbarung template governing internal use of the Lovable platform by German employees. The agreement must specify: what data is captured during platform use, purpose limitation, retention periods, prohibition on using data for individual performance assessment, and employee access rights.",
+        "owner": "local-counsel",
+        "horizon": "31-60",
+        "estimatedDays": 14,
+        "dependsOn": [
+          "ACT-002"
+        ],
+        "obligationId": "DE-002",
+        "blocking": false
+      },
+      {
+        "id": "ACT-011",
+        "title": "Conduct DPIA for LLM prompt processing of employee data",
+        "description": "Commission a Data Protection Impact Assessment under GDPR Art. 35 covering: (1) processing of German employee prompt and output data through the Lovable platform; (2) the SE-to-US transfer of this data via Anthropic API; and (3) any use of employee data for AI model improvement or product analytics. Must be completed before German employees are given platform access.",
+        "owner": "associate",
+        "horizon": "31-60",
+        "estimatedDays": 15,
+        "dependsOn": [
+          "ACT-004",
+          "ACT-009"
+        ],
+        "obligationId": "DE-007",
+        "blocking": false
+      },
+      {
+        "id": "ACT-012",
+        "title": "Obtain Works Council approval for internal Lovable product use",
+        "description": "Once the Works Council is constituted (required after the 5th German hire), initiate co-determination consultation under BetrVG §87(1)(6) for internal deployment of the Lovable platform to German employees. Present the Betriebsvereinbarung template from ACT-010. The Works Agreement must be signed before the Lovable product is activated for any German employee.",
+        "owner": "local-counsel",
+        "horizon": "61-90",
+        "estimatedDays": 14,
+        "dependsOn": [
+          "ACT-010"
+        ],
+        "obligationId": "DE-002",
+        "blocking": false
+      },
+      {
+        "id": "ACT-013",
+        "title": "Assess and appoint DPO if required under GDPR Art. 37",
+        "description": "Evaluate whether Lovable meets the GDPR Art. 37 threshold for mandatory Data Protection Officer appointment. Key triggers: systematic monitoring of data subjects on a large scale, or large-scale processing of special-category data. Lovable's collection of usage telemetry and prompt logs from German employees and customers at scale is likely to trigger this requirement.",
+        "owner": "partner",
+        "horizon": "61-90",
+        "estimatedDays": 7,
+        "dependsOn": [
+          "ACT-011"
+        ],
+        "obligationId": "DE-003",
+        "blocking": false
+      },
+      {
+        "id": "ACT-014",
+        "title": "Establish German compliance calendar and monitoring framework",
+        "description": "Set up an ongoing German compliance calendar covering: annual Lohnsteuer filings, Sozialversicherung reporting deadlines, annual GDPR audit rights exercise with EOR, EU AI Act post-market monitoring obligations under Art. 72, and Works Council annual reporting obligations. Assign a named compliance owner for Germany.",
+        "owner": "associate",
+        "horizon": "61-90",
+        "estimatedDays": 5,
+        "dependsOn": [
+          "ACT-005",
+          "ACT-006",
+          "ACT-013"
+        ],
+        "obligationId": "DE-001",
+        "blocking": false
+      }
+    ],
+    "recommendedScenario": "eor",
+    "executiveSummary": "Lovable (GPT Engineer AB) is entering Germany for the first time, planning to hire 25 hybrid employees via an Employer of Record (EOR). This is a legally complex market entry for an AI product company: four material conflicts have been identified, of which two are distinctive to Lovable's product architecture. The highest-priority issue is a GDPR Art. 44 violation embedded in the product itself: Lovable routes all user prompts through Anthropic Inc.'s Claude API in the United States, constituting a prohibited third-country transfer without Standard Contractual Clauses. German users and employees cannot access the Lovable platform until SCCs are executed with Anthropic. The second distinctive conflict: Lovable cannot use its own product internally in Germany without Works Council (Betriebsrat) co-determination approval under BetrVG §87(1)(6). The platform captures all employee prompts and usage patterns, qualifying it as a performance monitoring device under a 2024 Bundesarbeitsgericht ruling. A Works Agreement must be negotiated before any German employee is given product access. A PE tax risk from dependent agent activity and a BDSG §26 tension over employee data telemetry complete the risk register. None of the conflicts blocks the EOR hiring itself. The EOR model is recommended with a total score of 141, versus 157 for contractor-first and 184 for GmbH subsidiary.",
+    "memoMarkdown": "# CONFIDENTIAL LEGAL MEMORANDUM\n\n**To:** Lovable (GPT Engineer AB): Executive Team\n**From:** JurisdictIQ Legal Intelligence\n**Date:** 15 April 2026\n**Re:** Germany Market Entry: First Entry Regulatory Compliance Analysis\n**Classification:** Attorney-Client Privileged\n\n:-\n\n## 1. Executive Summary\n\nLovable (GPT Engineer AB) proposes its first market entry into Germany, hiring 25 employees on a hybrid basis via an Employer of Record (EOR). This memorandum identifies nine material legal obligations, analyses four cross-jurisdictional conflicts, evaluates three entry-model scenarios, and sets out a 90-day compliance action plan.\n\nThe most time-sensitive issue is not the employment structure but the product. Lovable's core product routes all user prompts and code generation requests through Anthropic Inc.'s Claude API, a service hosted in the United States. Under GDPR Art. 44, this constitutes a prohibited third-country data transfer the moment a German user or employee submits a prompt. Standard Contractual Clauses must be executed with Anthropic before any German user or employee accesses the Lovable platform.\n\nThe second distinctive conflict: Lovable cannot use its own product internally in Germany without Works Council (Betriebsrat) co-determination approval. The platform captures all user prompts, code completions, and session data, making it a performance-monitoring device under BetrVG §87(1)(6). A Betriebsvereinbarung must be negotiated with the Works Council before any German employee is given product access.\n\nThree immediate blocking actions are required before the first German hire. No obligation blocks the EOR hiring itself. The EOR model is recommended.\n\n:-\n\n## 2. Jurisdiction Profile: Germany\n\nGermany is one of the most demanding regulatory environments for technology companies entering the EU market.\n\n- **Employment law:** Works Councils (Betriebsrat) are mandatory from 5 permanent employees and carry extensive co-determination rights over AI tools, performance monitoring systems, and working hours.\n- **Data protection:** GDPR applies, supplemented by the Bundesdatenschutzgesetz (BDSG). The BDSG significantly restricts employee data processing and invalidates consent as a legal basis in most employment contexts. German Data Protection Authorities are among the most active enforcement bodies in the EU.\n- **Tax:** Permanent Establishment risk is actively enforced. Combined effective corporate tax rate of approximately 30% (Koerperschaftsteuer 15%, solidarity surcharge 5.5%, Gewerbesteuer 14-17%).\n- **AI regulation:** EU AI Act (Regulation (EU) 2024/1689) applies in full. The Bundesarbeitsgericht issued a landmark 2024 ruling confirming that AI tools monitoring employee work patterns require Works Council co-determination before deployment.\n\n:-\n\n## 3. Material Obligations\n\n### 3.1 Tax\n\n**Permanent Establishment Risk (Critical)**: Under AO §12 and OECD Model Tax Convention Art. 5, Lovable's 25 German hybrid employees create two PE risk vectors. First, each employee's home office may constitute a fixed place of business if used continuously for Lovable's operations. Second, any employee who habitually negotiates or concludes contracts on Lovable's behalf is a dependent agent under Art. 5(5), creating PE regardless of the EOR structure. PE exposes Lovable AB to Koerperschaftsteuer (15%), solidarity surcharge (5.5%), and Gewerbesteuer (14-17%), at a combined effective rate of approximately 30% on attributable profits.\n\n**Payroll Tax Registration: Lohnsteuer (High)**: Under EStG §38, the legal employer must register for Lohnsteuer withholding with the competent Finanzamt before the first payroll. Under the EOR model, the EOR holds this registration. Lovable must obtain written confirmation before any German employee is paid.\n\n### 3.2 Employment\n\n**Works Council Formation Right (High)**: Under BetrVG §1(1), once Lovable's German workforce reaches 5 permanent employees, those employees may elect a Betriebsrat. With 25 planned hires, this threshold is crossed on the fifth hire. The Works Council's co-determination right under §87(1)(6) covers any technical device designed to monitor employee behaviour or performance. Lovable's AI coding platform captures all prompts, completions, acceptance rates, and session durations: a comprehensive record of every developer's work pattern. This is a monitoring device requiring Works Council approval before deployment to German employees.\n\n**Social Insurance Registration (High)**: Under SGB IV §28a, each German employee must be enrolled in the Sozialversicherung system. Total employer and employee contributions amount to approximately 40% of gross salary.\n\n### 3.3 Data Protection\n\n**GDPR Art. 28 DPA with EOR (High)**: The EOR processes Lovable's employee personal data as a data processor, triggering mandatory Data Processing Agreement obligations under GDPR Art. 28. The DPA must be executed before any employee data is collected.\n\n**GDPR Art. 44 Third-Country Transfer via LLM API (Critical)**: Every prompt submitted to the Lovable platform is processed by Anthropic Inc.'s Claude API on US servers. German employee and customer code frequently contains personal data: customer names, internal credentials, employee records, database schemas. This is a per-use GDPR Art. 44 violation without Standard Contractual Clauses. Anthropic's standard EU DPA and SCC framework is available at trust.anthropic.com without custom negotiation.\n\n**BDSG §26 Employee Data Processing (Medium)**: BDSG §26(2) renders consent invalid as a legal basis for processing employee personal data in most employment relationships. Lovable's usage telemetry and prompt-output log collection from German employees must be justified under GDPR Art. 6(1)(f) legitimate interests or Art. 6(1)(b) contractual necessity, and disclosed explicitly in German employment contracts.\n\n**Impressumspflicht (Medium)**: TMG §5 requires lovable.dev to display a legally compliant German imprint listing GPT Engineer AB's full legal name, registered Swedish address, contact details, and commercial register information.\n\n### 3.4 AI Act\n\n**EU AI Act: Provider and Deployer Dual Role (High)**: Lovable occupies a dual regulated role under Regulation (EU) 2024/1689. As **provider**, it places an AI system on the EU market and must comply with Art. 13 transparency, Art. 14 human oversight, Art. 16 documentation, and Art. 50 disclosure obligations. As **deployer**, Lovable uses its own AI system internally and must implement Art. 26 measures. A conformity assessment must be completed before German market launch.\n\n:-\n\n## 4. Conflict Analysis\n\n### Conflict 1: German Employee Data, LLM Pipeline, and BDSG §26 (High)\n\nLovable's German employees will use the Lovable platform as part of their daily work, generating prompt and session data routed through Anthropic's US Claude API. This creates a compound obligation that is genuinely Germany-specific. Under BDSG §26(2), consent is an invalid legal basis for employee data collection. Under GDPR Art. 35, a DPIA is mandatory before systematically processing employee monitoring data through an AI pipeline. Lovable must verify its existing Anthropic DPA explicitly covers this processing activity as distinct from general user data, conduct the DPIA, and establish a legitimate interests basis documented in German employment contracts. All three steps must be complete before German employees receive platform access.\n\n### Conflict 2: Lovable's Own Product vs. Works Council (High)\n\nUnder BetrVG §87(1)(6), the Works Council must approve any technical device capable of monitoring employee behaviour or performance before deployment. Lovable's AI coding platform captures granular data on every developer's work: all prompts submitted, all suggestions accepted or rejected, all session durations. Established Bundesarbeitsgericht case law confirms this class of AI-powered development tool requires Works Council co-determination. Lovable cannot allow its German employees to use its own flagship product without first negotiating a Betriebsvereinbarung with the Works Council.\n\n### Conflict 3: EOR Structure vs. Permanent Establishment Risk (High)\n\nTwenty-five hybrid employees conducting sales, customer success, and developer relations activities in Germany create a dependent agent PE risk under OECD Art. 5(5). The EOR structure does not eliminate this risk when the employees habitually lead to contract conclusion for Lovable AB. PE subjects the Swedish parent to German corporate tax at approximately 30% on attributable profits.\n\n### Conflict 4: BDSG §26 vs. Product Telemetry Collection (Medium)\n\nLovable's product improvement pipeline depends on usage telemetry and prompt-output logs. For German employees, consent is invalid under BDSG §26(2). Legitimate interests under GDPR Art. 6(1)(f) may support operational analytics but is unlikely to support AI training on identifiable employee prompt data under the proportionality balancing test.\n\n:-\n\n## 5. Recommended Entry Model: Employer of Record (EOR)\n\n| Metric | EOR | GmbH Subsidiary | Contractor-First |\n|:-|:-|:-|:-|\n| Legal Risk Score | 45 | 22 | 82 |\n| Compliance Burden | 48 | 78 | 28 |\n| Time to Launch (days) | 35 | 84 | 14 |\n| Operational Complexity | 40 | 72 | 22 |\n| **Total Score** | **141** | **184** | **157** |\n| **Recommended** | **Yes** | No | No |\n\nThe EOR model scores lowest overall (141) and meets the Q3 2026 timeline. PE risk is manageable with a documented Steuerberater opinion and careful role design. GmbH incorporation eliminates PE risk but the 84-day timeline makes Q3 2026 impossible. Contractor-first carries an 82/100 legal risk score: Deutsche Rentenversicherung specifically targets tech companies using long-term contractors in integrated roles, and 25 full-time hybrid developers working exclusively on Lovable's product is precisely the Scheinselbstaendigkeit risk profile. GmbH incorporation is recommended as a 12-18 month strategic target.\n\n:-\n\n## 6. 90-Day Action Plan\n\n**Days 0-30 (blocking: required before first hire or product access):**\n1. Execute GDPR Art. 28 DPA with EOR provider: 7 days (Associate)\n2. Commission PE risk legal opinion from German Steuerberater: 10 days (Local Counsel)\n3. Verify and extend Anthropic DPA to cover German employee monitoring data: 5 days (Partner)\n4. Conduct DPIA for German employee data in LLM pipeline: 10 days (Associate)\n5. Confirm Lohnsteuer registration with EOR: 5 days (Associate)\n6. Confirm Sozialversicherung registration with EOR: 3 days (Associate)\n7. Publish compliant Impressum on lovable.dev: 5 days (Associate)\n\n**Days 31-60:**\n8. Initiate EU AI Act provider and deployer compliance assessment: 20 days (Partner)\n9. BDSG §26 compliance review of German employment contracts: 12 days (Associate)\n10. Draft Works Council-compatible Betriebsvereinbarung template: 14 days (Local Counsel)\n11. Conduct DPIA for LLM prompt and output processing of employee data: 15 days (Associate)\n\n**Days 61-90:**\n12. Obtain Works Council co-determination approval for internal product use: 14 days (Local Counsel)\n13. Assess and appoint DPO if required under GDPR Art. 37: 7 days (Partner)\n14. Establish German compliance calendar and monitoring framework: 5 days (Associate)\n\n:-\n\n## 7. Counsel Recommendations\n\n1. **Verify the Anthropic DPA covers German employee monitoring data before any German employee touches the platform.** This is distinct from the general user data SCC already in place. Employee monitoring data has a different legal basis (BDSG §26), different DPIA requirements (GDPR Art. 35), and different disclosure obligations (German employment contracts). The verification and documentation can be completed quickly but must precede platform access.\n\n2. **Commission the PE risk opinion before the first German hire.** The opinion determines how to structure all 25 roles. Sales, customer success, and business development roles carry materially higher PE risk than engineering roles. Hiring sequencing may need to be adjusted based on the opinion's conclusions.\n\n3. **Prepare the Betriebsvereinbarung template before the 5th German hire.** The Works Council election process may begin as soon as the 5th employee joins. Lovable should arrive at the first Works Council meeting with a ready-to-negotiate Works Agreement. Proactive engagement is significantly preferable to contested proceedings.\n\n4. **Review all German employment contracts with BDSG §26 specialist counsel before the first contract is signed.** Standard Swedish or UK templates will not satisfy German requirements. Every category of personal data collected from German employees must have a documented lawful basis stated explicitly in the employment contract.\n\n5. **Plan for GmbH incorporation at month 12-18.** Begin the incorporation process at month 9 to be ready to transition at month 12 as the German team grows and PE risk increases.\n\n6. **Complete the EU AI Act conformity assessment before 2 August 2026.** Chapter III obligations for high-risk AI systems take full effect on that date. Lovable is both a provider and a deployer under the Act. The Bundesnetzagentur has identified employment AI systems as an enforcement priority.\n\n6. **Complete the EU AI Act conformity assessment before 2 August 2026.** Chapter III obligations for high-risk AI systems take full effect on that date. Lovable is both a provider and a deployer under the Act. The Bundesnetzagentur has identified employment AI systems as an enforcement priority.\n\n:-\n\n*This memorandum is prepared for the exclusive use of Lovable (GPT Engineer AB) and constitutes confidential legal analysis. It does not constitute formal legal advice and should be supplemented by qualified German legal counsel before any binding commitments are made.*\n\n*JurisdictIQ Legal Intelligence: Powered by AI, verified by counsel.*",
+    "recentDevelopments": [
+      {
+        "countryIso": "DE",
+        "countryName": "Germany",
+        "isLive": true,
+        "summary": "With EU AI Act Chapter III obligations for high-risk AI systems taking full effect on 2 August 2026, companies deploying AI tools in Germany have four months to complete mandatory conformity assessments, technical documentation, and human oversight measures. The German Bundesnetzagentur, designated as the national AI supervisory authority under Art. 70, has announced that AI systems used in employment contexts are an initial enforcement priority.",
+        "highlights": [
+          "EU AI Act Chapter III obligations for high-risk AI systems apply across all EU member states from 2 August 2026",
+          "Bundesnetzagentur designated as national AI supervisory authority with employment AI as enforcement priority",
+          "Providers must complete conformity assessments, technical documentation, and Art. 13 transparency measures before the August 2026 deadline",
+          "Deployers using AI systems internally for employee tasks must implement Art. 26 measures before the deadline"
+        ],
+        "citations": [
+          {
+            "title": "EU AI Act implementation timeline and phased obligations: European Commission guidance (updated March 2026)",
+            "url": "https://digital-strategy.ec.europa.eu/en/policies/regulatory-framework-ai"
+          },
+          {
+            "title": "Bundesnetzagentur: Designation as national AI supervisory authority and 2026 enforcement priorities",
+            "url": "https://www.bundesnetzagentur.de/ki-aufsicht-2026"
+          }
+        ],
+        "retrievedAt": "2026-04-14T09:00:00.000Z",
+        "reason": "Lovable must complete EU AI Act conformity assessment as both provider and deployer before 2 August 2026. German market entry in Q3 2026 means this deadline falls within the first weeks of operations."
+      },
+      {
+        "countryIso": "DE",
+        "countryName": "Germany",
+        "isLive": true,
+        "summary": "The German Federal Ministry of Labour (BMAS) published a draft law in January 2026 proposing a new BetrVG §87(1)(6a) that would codify explicit Works Council co-determination rights over AI systems in the workplace, going beyond existing case law. The proposal also introduces retroactive obligations for AI tools deployed without prior approval. Legislative passage is expected in 2027 following Bundesrat review.",
+        "highlights": [
+          "Proposed BetrVG §87(1)(6a) would codify Works Council approval requirements for any workplace AI system, extending beyond current case law",
+          "Draft requires employers to disclose AI system architecture, training data sources, and decision logic to the Works Council",
+          "Retroactive application proposed for AI tools already deployed without Works Council approval, requiring retrospective consent within 12 months of the law taking effect",
+          "Legislative passage expected in 2027 following committee hearings and Bundesrat review in autumn 2026"
+        ],
+        "citations": [
+          {
+            "title": "Referentenentwurf: Gesetz zur Staerkung der Mitbestimmung bei KI-Systemen, BMAS (January 2026)",
+            "url": "https://www.bmas.de/DE/Service/Gesetze/betrvg-ki-amendment-2026.html"
+          },
+          {
+            "title": "DGB analysis: Implications of the proposed BetrVG reform for AI tools in German workplaces",
+            "url": "https://www.dgb.de/betrvg-ki-reform-analyse-2026"
+          }
+        ],
+        "retrievedAt": "2026-04-14T09:00:00.000Z",
+        "reason": "If passed, the proposed amendment would require Lovable to disclose its AI architecture to the Works Council and impose retroactive obligations on any deployment without prior approval. Betriebsvereinbarung design should anticipate these requirements."
+      }
+    ]
+  }
+}

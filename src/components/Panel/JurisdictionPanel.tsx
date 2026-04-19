@@ -114,9 +114,20 @@ export function JurisdictionPanel({ country, presence, onClose, onRunAnalysis, i
                 >
                   −
                 </button>
-                <span className="flex-1 text-center font-headline text-lg font-bold text-primary py-2">
-                  {headcount}
-                </span>
+                <input
+                  type="number"
+                  min={1}
+                  value={headcount}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    if (!isNaN(v) && v >= 1) setHeadcount(v);
+                  }}
+                  onBlur={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    setHeadcount(isNaN(v) || v < 1 ? 1 : v);
+                  }}
+                  className="flex-1 text-center font-headline text-lg font-bold text-primary py-2 bg-transparent outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                />
                 <button
                   onClick={() => setHeadcount((v) => v + 1)}
                   className="px-4 py-2 font-mono text-sm text-outline hover:text-primary border-l border-outline-variant"

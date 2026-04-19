@@ -43,6 +43,8 @@ export interface Session {
   memoChat: MemoChatTurn[];
   memoSignOff: MemoSignOff | null;
   supportingDocuments: SupportingDocument[];
+  /** When true the session replays cached demo data instead of calling the AI pipeline. */
+  isDemoSession?: boolean;
 }
 
 export const sessions = new Map<string, Session>();

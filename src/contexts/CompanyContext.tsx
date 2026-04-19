@@ -182,7 +182,7 @@ export const COMPANY_PRESETS: Record<PresetId, CompanyPreset> = {
       hqCountry: "Sweden (SE)",
       legalEntity: "Aktiebolag (AB)",
       industry: "AI-Powered Developer Tools",
-      headcount: 82,
+      headcount: 150,
       revenue: "€10 M – €100 M",
       productCategory: "AI Full-Stack Application Generator (B2B/B2C SaaS)",
       hasAiFeatures: true,
@@ -190,11 +190,9 @@ export const COMPANY_PRESETS: Record<PresetId, CompanyPreset> = {
       notes: "High-growth AI startup. Rapid international hiring via EOR. EU AI Act obligations central to product roadmap. LLM API dependencies on US providers create cross-border data flow obligations.",
     },
     footprint: [
-      { iso: "SE", country: "Sweden", entityType: "Headquarters", headcount: 45, localInvoicing: true, notes: "Core engineering, product, and leadership. Parent entity. All IP held here." },
-      { iso: "US", country: "United States", entityType: "Employer of Record", headcount: 22, localInvoicing: false, notes: "Sales and developer relations via EOR. Key US customer market." },
-      { iso: "GB", country: "United Kingdom", entityType: "Employer of Record", headcount: 9, localInvoicing: false, notes: "European sales support. UK GDPR obligations apply via EOR." },
-      { iso: "DE", country: "Germany", entityType: "Employer of Record", headcount: 4, localInvoicing: false, notes: "DACH market support. GDPR-aligned EOR structure." },
-      { iso: "FR", country: "France", entityType: "Contractor", headcount: 2, localInvoicing: false, notes: "AI research contractors. Misclassification risk under French labour law being reviewed." },
+      { iso: "SE", country: "Sweden", entityType: "Headquarters", headcount: 85, localInvoicing: true, notes: "Core engineering, product, and leadership. Parent entity. All IP held here." },
+      { iso: "US", country: "United States", entityType: "Employer of Record", headcount: 45, localInvoicing: false, notes: "Sales and developer relations via EOR. Key US customer market." },
+      { iso: "GB", country: "United Kingdom", entityType: "Employer of Record", headcount: 20, localInvoicing: false, notes: "European sales support. UK GDPR obligations apply via EOR." },
     ],
     dataArch: {
       categories: ["User Code & Project Data", "LLM Prompt & Output Logs", "Personal & Account Data", "Usage & Telemetry Data"],

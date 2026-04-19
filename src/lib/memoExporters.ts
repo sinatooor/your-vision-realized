@@ -431,6 +431,84 @@ export function exportMemoAsPdf(memo: MemoExportPayload) {
     doc.text(`Signed ${formatSignedDate(memo.signOff.signedAt)}`, marginX, y);
     y += 12;
     doc.text(`${FIRM_NAME} — Approved for client delivery`, marginX, y);
+
+    // Client signature block (right column, same row as lawyer block)
+    const clientX = marginX + contentW / 2 + 12;
+    const clientBlockY = y - 100; // align with lawyer block start
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(...MUTED);
+    doc.text("CLIENT ACKNOWLEDGEMENT", clientX, clientBlockY);
+
+    // Blank signature box
+    doc.setDrawColor(...RULE);
+    doc.setLineWidth(0.5);
+    doc.rect(clientX, clientBlockY + 8, contentW / 2 - 12, 50);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...MUTED);
+    doc.text("Signature", clientX + 4, clientBlockY + 12);
+
+    // Name line
+    const nameLineY = clientBlockY + 68;
+    doc.line(clientX, nameLineY, clientX + (contentW / 2 - 12) * 0.6, nameLineY);
+    doc.setFontSize(7);
+    doc.text("Name", clientX, nameLineY + 9);
+
+    // Date line
+    const dateLineX = clientX + (contentW / 2 - 12) * 0.65;
+    doc.line(dateLineX, nameLineY, clientX + contentW / 2 - 12, nameLineY);
+    doc.text("Date", dateLineX, nameLineY + 9);
+  } else {
+    // No lawyer sign-off yet — still include blank client block for printing
+    y += 24;
+    ensure(160);
+    doc.setDrawColor(...PRIMARY);
+    doc.setLineWidth(1);
+    doc.line(marginX, y, marginX + contentW, y);
+    y += 20;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...PRIMARY);
+    doc.text("SIGN-OFF", marginX, y);
+    y += 18;
+
+    // Lawyer column
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(...MUTED);
+    doc.text("LAWYER / PARTNER SIGN-OFF", marginX, y);
+    doc.setDrawColor(...RULE);
+    doc.setLineWidth(0.5);
+    doc.rect(marginX, y + 6, contentW / 2 - 12, 50);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.text("Signature", marginX + 4, y + 10);
+    const lwrNameY = y + 66;
+    doc.line(marginX, lwrNameY, marginX + (contentW / 2 - 12) * 0.6, lwrNameY);
+    doc.text("Name", marginX, lwrNameY + 9);
+    const lwrDateX = marginX + (contentW / 2 - 12) * 0.65;
+    doc.line(lwrDateX, lwrNameY, marginX + contentW / 2 - 12, lwrNameY);
+    doc.text("Date", lwrDateX, lwrNameY + 9);
+
+    // Client column
+    const clientX2 = marginX + contentW / 2 + 12;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(...MUTED);
+    doc.text("CLIENT ACKNOWLEDGEMENT", clientX2, y);
+    doc.setDrawColor(...RULE);
+    doc.setLineWidth(0.5);
+    doc.rect(clientX2, y + 6, contentW / 2 - 12, 50);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.text("Signature", clientX2 + 4, y + 10);
+    const cliNameY = y + 66;
+    doc.line(clientX2, cliNameY, clientX2 + (contentW / 2 - 12) * 0.6, cliNameY);
+    doc.text("Name", clientX2, cliNameY + 9);
+    const cliDateX = clientX2 + (contentW / 2 - 12) * 0.65;
+    doc.line(cliDateX, cliNameY, clientX2 + contentW / 2 - 12, cliNameY);
+    doc.text("Date", cliDateX, cliNameY + 9);
   }
 
   addFooter();
@@ -650,6 +728,33 @@ export async function exportMemoAsDocx(memo: MemoExportPayload) {
       }),
     );
   }
+
+  // Client signature block — always included for printing
+  children.push(
+    new Paragraph({ children: [], spacing: { before: 480 } }),
+    new Paragraph({
+      children: [new TextRun({ text: "CLIENT ACKNOWLEDGEMENT", bold: true, size: 18, color: "64748B" })],
+      spacing: { after: 80 },
+    }),
+    new Paragraph({
+      children: [new TextRun({ text: " ", size: 22 })],
+      border: {
+        top: { color: "CBD5E1", space: 1, style: BorderStyle.SINGLE, size: 6 },
+        bottom: { color: "CBD5E1", space: 1, style: BorderStyle.SINGLE, size: 6 },
+        left: { color: "CBD5E1", space: 1, style: BorderStyle.SINGLE, size: 6 },
+        right: { color: "CBD5E1", space: 1, style: BorderStyle.SINGLE, size: 6 },
+      },
+      spacing: { before: 40, after: 40 },
+      indent: { left: 0 },
+    }),
+    new Paragraph({ children: [new TextRun({ text: " " })], spacing: { after: 40 } }),
+    new Paragraph({ children: [new TextRun({ text: " " })], spacing: { after: 40 } }),
+    new Paragraph({ children: [new TextRun({ text: " " })], spacing: { after: 40 } }),
+    new Paragraph({
+      children: [new TextRun({ text: "Name: ___________________________          Date: ________________", size: 20, color: "64748B" })],
+      spacing: { after: 120 },
+    }),
+  );
 
   const doc = new Document({
     creator: FIRM_NAME,

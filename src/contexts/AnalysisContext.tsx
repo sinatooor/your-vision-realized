@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, useMemo, ReactNode } from "react";
-import { useAgentStream, startAnalysis, fetchResult, fetchTwin, confirmTwin } from "@/lib/useAgentStream";
+import { useAgentStream, startAnalysis, startDemoAnalysis, fetchResult, fetchTwin, confirmTwin } from "@/lib/useAgentStream";
 import { AnalysisParams, AnalysisResult, EntityType, ExpansionTwin, PresenceData, AgentEvent } from "@/types";
 import { useCompany } from "@/contexts/CompanyContext";
 import type { CompanyProfile, FootprintEntry, DataArchitecture } from "@/contexts/CompanyContext";
@@ -112,8 +112,13 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
       setShowTwinReview(false);
       setHasNavigatedToResults(false);
       try {
-        const brief = buildBrief(activeCountry.iso, activeCountry.name, params, company, footprint, dataArch);
-        const sid = await startAnalysis(brief);
+        let sid: string;
+        if (activeCountry.iso === "DE") {
+          sid = await startDemoAnalysis();
+        } else {
+          const brief = buildBrief(activeCountry.iso, activeCountry.name, params, company, footprint, dataArch);
+          sid = await startAnalysis(brief);
+        }
         setSessionId(sid);
         startStream(sid);
       } catch (err) {

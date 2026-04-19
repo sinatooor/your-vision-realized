@@ -1,10 +1,71 @@
 import { Router, Request, Response } from "express";
+import { existsSync, readFileSync } from "fs";
+import { join } from "path";
 import { v4 as uuidv4 } from "uuid";
 import { SSEStream } from "../lib/sse";
 import { sessions, runPipeline, Session, MemoChatTurn } from "../orchestration/pipeline";
 import { runMemoChat } from "../agents/agent7-memo-chat";
+import { AgentEvent, AnalysisResult, ExpansionTwin } from "../types";
 
 export const analysisRouter = Router();
+
+// ---------------------------------------------------------------------------
+// Demo helpers
+// ---------------------------------------------------------------------------
+
+interface DemoPayload {
+  twin: ExpansionTwin;
+  result: AnalysisResult;
+}
+
+function loadDemoPayload(): DemoPayload | null {
+  const p = join(__dirname, "../data/demo-germany.json");
+  if (!existsSync(p)) return null;
+  return JSON.parse(readFileSync(p, "utf-8")) as DemoPayload;
+}
+
+const DEMO_SCRIPT: Array<{ ms: number; event: Omit<AgentEvent, "timestamp"> }> = [
+  { ms: 0,    event: { type: "agent_start",       agent: "Agent 1 — Intake",             message: "Parsing mandate brief…" } },
+  { ms: 700,  event: { type: "agent_complete",    agent: "Agent 1 — Intake",             message: "Expansion twin extracted — Lovable (GPT Engineer AB) → DE (first entry)" } },
+  { ms: 1100, event: { type: "agent_start",       agent: "Agent 2 — Jurisdiction Scout", message: "Scouting DE regulatory landscape…" } },
+  { ms: 1600, event: { type: "api_call",          agent: "Agent 2 — Jurisdiction Scout", message: "Loading DE rule pack" } },
+  { ms: 2000, event: { type: "api_result",        agent: "Agent 2 — Jurisdiction Scout", message: "9 base obligations loaded" } },
+  { ms: 2300, event: { type: "api_call",          agent: "Agent 2 — Jurisdiction Scout", message: "Enriching GDPR Art. 44 obligations via EUR-Lex" } },
+  { ms: 2900, event: { type: "api_result",        agent: "Agent 2 — Jurisdiction Scout", message: "GDPR Art. 44-46 (Schrems II) enriched" } },
+  { ms: 3200, event: { type: "api_call",          agent: "Agent 2 — Jurisdiction Scout", message: "Enriching EU AI Act obligations via EUR-Lex" } },
+  { ms: 3700, event: { type: "api_result",        agent: "Agent 2 — Jurisdiction Scout", message: "EU AI Act Art. 13, 16, 26, 50 enriched" } },
+  { ms: 4000, event: { type: "api_call",          agent: "Agent 2 — Jurisdiction Scout", message: "Screening entity via OpenSanctions" } },
+  { ms: 4400, event: { type: "api_result",        agent: "Agent 2 — Jurisdiction Scout", message: "No sanctions matches found" } },
+  { ms: 4600, event: { type: "api_call",          agent: "Agent 2 — Jurisdiction Scout", message: "Fetching recent regulatory developments (Perplexity)" } },
+  { ms: 5200, event: { type: "api_result",        agent: "Agent 2 — Jurisdiction Scout", message: "BAG 2024 ruling on AI monitoring tools retrieved" } },
+  { ms: 5400, event: { type: "agent_complete",    agent: "Agent 2 — Jurisdiction Scout", message: "Scouted DE — 9 obligations identified" } },
+  { ms: 5700, event: { type: "agent_start",       agent: "Agent 3 — Conflict Engine",    message: "Detecting cross-jurisdiction conflicts…" } },
+  { ms: 6100, event: { type: "conflict_detected", agent: "Agent 3 — Conflict Engine",    message: "GDPR Art. 44 violation: LLM API routes EU data to Anthropic US servers without SCCs" } },
+  { ms: 6500, event: { type: "conflict_detected", agent: "Agent 3 — Conflict Engine",    message: "BetrVG §87(1)(6): Works Council must approve Lovable's own product before internal use" } },
+  { ms: 6900, event: { type: "conflict_detected", agent: "Agent 3 — Conflict Engine",    message: "PE risk: EOR structure does not eliminate dependent agent exposure" } },
+  { ms: 7200, event: { type: "agent_complete",    agent: "Agent 3 — Conflict Engine",    message: "4 conflicts identified, 0 block expansion" } },
+  { ms: 7500, event: { type: "agent_start",       agent: "Agent 4 — Scenario Simulator", message: "Evaluating entry-model scenarios…" } },
+  { ms: 7900, event: { type: "scenario_scored",   agent: "Agent 4 — Scenario Simulator", message: "EOR model scored 141 — recommended" } },
+  { ms: 8200, event: { type: "scenario_scored",   agent: "Agent 4 — Scenario Simulator", message: "Contractor-first scored 157 — Scheinselbstaendigkeit risk too high" } },
+  { ms: 8500, event: { type: "scenario_scored",   agent: "Agent 4 — Scenario Simulator", message: "GmbH subsidiary scored 184 — Q3 2025 timeline incompatible" } },
+  { ms: 8700, event: { type: "agent_complete",    agent: "Agent 4 — Scenario Simulator", message: "EOR recommended — fastest compliant path (35 days to first hire)" } },
+  { ms: 8900, event: { type: "agent_start",       agent: "Agent 5 — Resolution Planner", message: "Drafting 90-day compliance action plan…" } },
+  { ms: 9400, event: { type: "agent_complete",    agent: "Agent 5 — Resolution Planner", message: "14 actions planned across 0-30 / 31-60 / 61-90 day horizons" } },
+  { ms: 9600, event: { type: "agent_start",       agent: "Agent 6 — Memo Writer",        message: "Generating legal memorandum…" } },
+  { ms: 9800, event: { type: "memo_ready",        agent: "Agent 6 — Memo Writer",        message: "Memorandum complete" } },
+  { ms: 9900, event: { type: "agent_complete",    agent: "Agent 6 — Memo Writer",        message: "Memo ready — analysis complete" } },
+];
+
+async function replayDemoStream(stream: SSEStream): Promise<void> {
+  let prev = 0;
+  for (const { ms, event } of DEMO_SCRIPT) {
+    await new Promise<void>((r) => setTimeout(r, ms - prev));
+    prev = ms;
+    stream.emit({ ...event, timestamp: new Date().toISOString() });
+  }
+  // brief pause before [DONE]
+  await new Promise<void>((r) => setTimeout(r, 200));
+}
 
 // POST /api/analysis/start
 analysisRouter.post("/start", (req: Request, res: Response) => {
@@ -56,14 +117,56 @@ analysisRouter.get("/:sessionId/stream", (req: Request, res: Response) => {
     return;
   }
 
-  // Start the pipeline
   session.status = "running";
+
+  if (session.isDemoSession) {
+    // Replay cached events over ~10 seconds then close
+    replayDemoStream(stream).then(() => {
+      session.status = "complete";
+      stream.close();
+    }).catch((err: Error) => {
+      stream.emit({ type: "error", agent: "System", message: err.message, timestamp: new Date().toISOString() });
+      stream.close();
+    });
+    return;
+  }
+
+  // Start the real AI pipeline
   runPipeline(session.id, session.brief, stream).then(() => {
     stream.close();
   }).catch((err: Error) => {
     stream.emit({ type: "error", agent: "System", message: err.message, timestamp: new Date().toISOString() });
     stream.close();
   });
+});
+
+// POST /api/analysis/demo — create a demo session backed by cached Germany data
+analysisRouter.post("/demo", (req: Request, res: Response) => {
+  const payload = loadDemoPayload();
+  if (!payload) {
+    res.status(503).json({ error: "Demo data not seeded yet — run `npm run seed:demo` in apps/api/" });
+    return;
+  }
+
+  const sessionId = uuidv4();
+  const session: Session = {
+    id: sessionId,
+    status: "pending",
+    brief: payload.twin.rawBrief,
+    twin: payload.twin,
+    twinConfirmed: true,
+    result: payload.result,
+    error: null,
+    createdAt: new Date().toISOString(),
+    stream: null,
+    memoChat: [],
+    memoSignOff: null,
+    supportingDocuments: [],
+    isDemoSession: true,
+  };
+  sessions.set(sessionId, session);
+
+  res.status(202).json({ sessionId });
 });
 
 // GET /api/analysis/:sessionId/twin

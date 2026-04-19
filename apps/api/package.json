@@ -6,6 +6,7 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc -p tsconfig.json",
     "test": "vitest run --config vitest.config.ts",
+    "seed:demo": "ts-node src/scripts/seed-germany.ts",
     "fetch:sources": "ts-node src/data/fetch-sources.ts",
     "fetch:de": "ts-node -e \"require('./src/data/sources/german-law').fetchMultipleGermanLaws(['betrvg','estg','ao_1977','tmg','gmbhg','sgb_4']).then(console.log)\"",
     "fetch:eu": "ts-node -e \"require('./src/integrations/eurlex').prefetchEULaws([{celex:'32016R0679',articleNumbers:['5','6','9','28']},{celex:'32024R1689',articleNumbers:['6','9','13']}]).then(console.log)\"",

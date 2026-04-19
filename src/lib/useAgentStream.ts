@@ -86,6 +86,16 @@ export async function startAnalysis(brief: string): Promise<string> {
   return sessionId;
 }
 
+export async function startDemoAnalysis(): Promise<string> {
+  const res = await fetch(`${API_URL}/api/analysis/demo`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!res.ok) throw new Error(`Demo data not available: ${res.status}`);
+  const { sessionId } = (await res.json()) as { sessionId: string };
+  return sessionId;
+}
+
 export async function confirmTwin(sessionId: string, twin?: unknown): Promise<void> {
   await fetch(`${API_URL}/api/analysis/${sessionId}/twin`, {
     method: "PATCH",
