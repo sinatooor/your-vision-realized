@@ -157,6 +157,26 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
   const [showTwinReview, setShowTwinReview] = useState(false);
   const [hasNavigatedToResults, setHasNavigatedToResults] = useState(false);
 
+  // Persisted history of completed expansion analyses.
+  const [savedExpansions, setSavedExpansions] = useState<SavedExpansion[]>(() => {
+    try {
+      const raw = localStorage.getItem("tg_saved_expansions");
+      return raw ? (JSON.parse(raw) as SavedExpansion[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [activeSavedId, setActiveSavedId] = useState<string | null>(null);
+
+  const persistSaved = useCallback((next: SavedExpansion[]) => {
+    setSavedExpansions(next);
+    try {
+      localStorage.setItem("tg_saved_expansions", JSON.stringify(next));
+    } catch {
+      /* quota */
+    }
+  }, []);
+
   const markNavigatedToResults = useCallback(() => setHasNavigatedToResults(true), []);
 
   const { events, isRunning, isComplete, error, start: startStream, reset: resetStream } = useAgentStream();
