@@ -98,6 +98,7 @@ export default function Overview() {
   const {
     presenceData,
     activeCountry,
+    cases,
     panelOpen,
     result,
     twin,
@@ -202,6 +203,7 @@ export default function Overview() {
             presenceData={presenceData}
             onCountryClick={handleCountryClick}
             activeCountry={activeCountry?.iso ?? null}
+            selectedCountries={cases.map((c) => c.iso)}
             panelOpen={panelOpen}
           />
 
