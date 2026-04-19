@@ -259,8 +259,15 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateCaseParams = useCallback((caseId: string, patch: Partial<AnalysisParams>) => {
-    setCases((prev) => prev.map((c) => (c.id === caseId ? { ...c, params: { ...c.params, ...patch } } : c)));
-  }, []);
+    setCases((prev) =>
+      prev.map((c) => {
+        if (c.id !== caseId) return c;
+        const nextParams = { ...c.params, ...patch };
+        writeParamsCache(c.iso, nextParams);
+        return { ...c, params: nextParams };
+      }),
+    );
+  }, [writeParamsCache]);
 
   const removeCase = useCallback((caseId: string) => {
     setCases((prev) => {
