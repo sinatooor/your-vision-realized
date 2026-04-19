@@ -84,7 +84,7 @@ export function ScenarioTable({ scenarios }: ScenarioTableProps) {
                       className={`py-3 px-4 text-center font-headline font-bold ${
                         s.recommended ? "border-x-2 border-primary" : ""
                       } ${isTotal ? "border-t border-outline-variant" : ""} ${
-                        isTime ? "text-on-surface" : scoreColor(value as number)
+                        isTime ? (s.recommended ? "text-on-surface" : "text-outline") : numberColor(s.recommended)
                       }`}
                     >
                       {isTime ? `${value}d` : `${value}`}
