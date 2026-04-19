@@ -245,7 +245,7 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, selected
   };
 
   // Base scale fills the container width
-  const baseScale = (dims.width - (panelOpen ? 340 : 0)) / 5.5;
+  const baseScale = dims.width / 5.5;
   // Counter-scale so circles + strokes stay visually constant at any zoom (wheel, pinch, click)
   const inv = 1 / position.zoom;
 
@@ -253,11 +253,10 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, selected
     <div
       ref={containerRef}
       className="relative w-full h-full rsm-map"
-      style={{ paddingRight: panelOpen ? 340 : 0, transition: "padding-right 350ms cubic-bezier(0.4,0,0.2,1)" }}
       onMouseMove={handleMouseMove}
     >
       <ComposableMap
-        width={dims.width - (panelOpen ? 340 : 0)}
+        width={dims.width}
         height={dims.height}
         projectionConfig={{ scale: baseScale, center: [0, 15] }}
         style={{ width: "100%", height: "100%", display: "block" }}
