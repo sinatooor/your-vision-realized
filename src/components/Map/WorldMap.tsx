@@ -310,7 +310,7 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, selected
                         transition: "fill 120ms ease",
                       },
                       hover: {
-                        fill: iso === activeCountry ? "#0A0A0A" : "#C8C5BE",
+                        fill: iso === activeCountry ? "#0A0A0A" : selectedSet.has(iso) ? "#3A3A3A" : "#C8C5BE",
                         stroke: getStroke(iso),
                         strokeWidth: 0.5 * inv,
                         outline: "none",
