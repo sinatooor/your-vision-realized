@@ -66,6 +66,7 @@ interface WorldMapProps {
   presenceData: Record<string, PresenceData>;
   onCountryClick: (isoCode: string, countryName: string) => void;
   activeCountry: string | null;
+  selectedCountries?: string[];
   panelOpen: boolean;
 }
 
@@ -92,7 +93,8 @@ const MAX_ZOOM = 20;
 const ZOOM_DURATION = 600;       // ms
 const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
-export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpen }: WorldMapProps) {
+export function WorldMap({ presenceData, onCountryClick, activeCountry, selectedCountries, panelOpen }: WorldMapProps) {
+  const selectedSet = new Set(selectedCountries ?? []);
   const [hovered, setHovered] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -230,6 +232,7 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
 
   const getFill = (iso: string): string => {
     if (iso === activeCountry) return "#0A0A0A";
+    if (selectedSet.has(iso)) return "#5A5A5A";
     if (hovered === iso) return "#C8C5BE";
     if (presenceData[iso]) return "#D8D4CC";
     return "#ECEAE3";
@@ -237,6 +240,7 @@ export function WorldMap({ presenceData, onCountryClick, activeCountry, panelOpe
 
   const getStroke = (iso: string): string => {
     if (iso === activeCountry) return "#0A0A0A";
+    if (selectedSet.has(iso)) return "#0A0A0A";
     return "#C8C5BE";
   };
 
