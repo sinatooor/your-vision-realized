@@ -15,10 +15,40 @@ function mapEntityType(label: string): EntityType {
   return "eor";
 }
 
-function buildBrief(
-  country: string,
-  countryName: string,
-  params: AnalysisParams,
+export interface ExpansionCase {
+  id: string;
+  iso: string;
+  name: string;
+  params: AnalysisParams;
+}
+
+export const DEFAULT_CASE_PARAMS: AnalysisParams = {
+  targetHeadcount: 3,
+  arrangement: "remote",
+  entityStructure: "eor",
+  startDate: "",
+  dataType: "hr-only",
+  industry: "hr-saas",
+  revenueEur: "1m-10m",
+  hasAiFeatures: false,
+};
+
+function describeCase(
+  c: ExpansionCase,
+  index: number,
+  total: number,
+): string {
+  const dataDesc =
+    c.params.dataType === "hr-only"
+      ? "HR data (employee records, payroll, performance)"
+      : c.params.dataType === "personal"
+      ? "personal and customer data"
+      : "no personal data";
+  return `Plan ${index + 1} of ${total} — ${c.name} (${c.iso}): hire ${c.params.targetHeadcount} employees on a ${c.params.arrangement} basis using ${c.params.entityStructure} structure, processing ${dataDesc}, target launch ${c.params.startDate || "unspecified"}.`;
+}
+
+function buildMultiCaseBrief(
+  cases: ExpansionCase[],
   company: CompanyProfile,
   footprint: FootprintEntry[],
   dataArch: DataArchitecture,
@@ -29,26 +59,36 @@ function buildBrief(
     .filter((r) => r.iso !== hqIso)
     .map((r) => `${r.iso}: ${r.headcount} (${mapEntityType(r.entityType)})`)
     .join(", ");
-  const dataDesc =
-    params.dataType === "hr-only"
-      ? "HR data (employee records, payroll, performance data)"
-      : params.dataType === "personal"
-      ? "personal and customer data"
-      : "no personal data";
   const aiNote =
-    company.hasAiFeatures || params.hasAiFeatures
+    company.hasAiFeatures || cases.some((c) => c.params.hasAiFeatures)
       ? " Their product includes AI/ML features subject to AI Act obligations."
       : "";
   const storageNote = dataArch.centralized
     ? `centralised in ${dataArch.storageJurisdiction}`
     : `distributed across ${dataArch.storageJurisdiction}`;
-  return `${company.name} is a ${company.industry} company headquartered in ${company.hqCountry} with approximately ${globalHeadcount} employees globally and annual revenue of ${company.revenue}. They are expanding to ${countryName} (${country}) and plan to hire ${params.targetHeadcount} employees on a ${params.arrangement} basis using ${params.entityStructure} structure. They process ${dataDesc}. Their data architecture is ${storageNote}. Target launch: ${params.startDate || "Q2 2025"}. Current international presence — ${currentPresence}.${aiNote}`;
+
+  const planLines = cases.map((c, i) => describeCase(c, i, cases.length)).join("\n");
+  const targets = cases.map((c) => `${c.name} (${c.iso})`).join(", ");
+
+  const crossNote =
+    cases.length > 1
+      ? ` IMPORTANT: Analyse all ${cases.length} expansion plans together as a single combined programme. Surface cross-jurisdiction interactions, dependencies, and conflicts BETWEEN the plans (e.g. tax exposure triggered in one country by activity in another, data transfers between target countries, sanctions or licensing rules that interact across borders, headcount thresholds that aggregate globally). Recommend an action plan that sequences and reconciles all plans, not country-by-country in isolation.`
+      : "";
+
+  return `${company.name} is a ${company.industry} company headquartered in ${company.hqCountry} with approximately ${globalHeadcount} employees globally and annual revenue of ${company.revenue}. Their data architecture is ${storageNote}. Current international presence — ${currentPresence}.${aiNote}
+
+They are planning a combined cross-border expansion into: ${targets}.
+
+${planLines}${crossNote}`;
 }
 
 interface AnalysisContextValue {
   presenceData: Record<string, PresenceData>;
   activeCountry: { iso: string; name: string } | null;
   panelOpen: boolean;
+  cases: ExpansionCase[];
+  activeCaseId: string | null;
+  isAddingCase: boolean;
   sessionId: string | null;
   result: AnalysisResult | null;
   twin: ExpansionTwin | null;
@@ -61,7 +101,12 @@ interface AnalysisContextValue {
   markNavigatedToResults: () => void;
   handleCountryClick: (iso: string, name: string) => void;
   handleClose: () => void;
-  handleRunAnalysis: (params: AnalysisParams) => Promise<void>;
+  handleRunAnalysis: () => Promise<void>;
+  updateCaseParams: (caseId: string, patch: Partial<AnalysisParams>) => void;
+  removeCase: (caseId: string) => void;
+  setActiveCaseId: (caseId: string) => void;
+  beginAddCase: () => void;
+  cancelAddCase: () => void;
   confirmTwinAndContinue: () => Promise<void>;
   setShowTwinReview: (v: boolean) => void;
   resetAnalysis: () => void;
@@ -69,6 +114,10 @@ interface AnalysisContextValue {
 }
 
 const AnalysisContext = createContext<AnalysisContextValue | null>(null);
+
+function makeCaseId() {
+  return `case_${Math.random().toString(36).slice(2, 10)}`;
+}
 
 export function AnalysisProvider({ children }: { children: ReactNode }) {
   const { company, footprint, dataArch } = useCompany();
@@ -83,6 +132,10 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
 
   const [activeCountry, setActiveCountry] = useState<{ iso: string; name: string } | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [cases, setCases] = useState<ExpansionCase[]>([]);
+  const [activeCaseId, setActiveCaseIdState] = useState<string | null>(null);
+  const [isAddingCase, setIsAddingCase] = useState(false);
+
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [twin, setTwin] = useState<ExpansionTwin | null>(null);
@@ -94,39 +147,115 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
   const { events, isRunning, isComplete, error, start: startStream, reset: resetStream } = useAgentStream();
 
   const handleCountryClick = useCallback((iso: string, name: string) => {
-    setActiveCountry({ iso, name });
-    setPanelOpen(true);
-  }, []);
+    setCases((prev) => {
+      // If case already exists for this country, just focus it.
+      const existing = prev.find((c) => c.iso === iso);
+      if (existing) {
+        setActiveCaseIdState(existing.id);
+        setActiveCountry({ iso, name });
+        setPanelOpen(true);
+        setIsAddingCase(false);
+        return prev;
+      }
+
+      // If adding a new case, append. Otherwise replace single case with first selection.
+      if (prev.length === 0 || isAddingCase) {
+        const newCase: ExpansionCase = {
+          id: makeCaseId(),
+          iso,
+          name,
+          params: { ...DEFAULT_CASE_PARAMS },
+        };
+        setActiveCaseIdState(newCase.id);
+        setActiveCountry({ iso, name });
+        setPanelOpen(true);
+        setIsAddingCase(false);
+        return [...prev, newCase];
+      }
+
+      // Default: replace the only case (preserve multi-case mode if user already has >1).
+      const newCase: ExpansionCase = {
+        id: makeCaseId(),
+        iso,
+        name,
+        params: { ...DEFAULT_CASE_PARAMS },
+      };
+      setActiveCaseIdState(newCase.id);
+      setActiveCountry({ iso, name });
+      setPanelOpen(true);
+      return [newCase];
+    });
+  }, [isAddingCase]);
 
   const handleClose = useCallback(() => {
     setPanelOpen(false);
     setActiveCountry(null);
+    setActiveCaseIdState(null);
+    setIsAddingCase(false);
+    setCases([]);
   }, []);
 
-  const handleRunAnalysis = useCallback(
-    async (params: AnalysisParams) => {
-      if (!activeCountry) return;
-      resetStream();
-      setResult(null);
-      setTwin(null);
-      setShowTwinReview(false);
-      setHasNavigatedToResults(false);
-      try {
-        let sid: string;
-        if (activeCountry.iso === "DE") {
-          sid = await startDemoAnalysis();
-        } else {
-          const brief = buildBrief(activeCountry.iso, activeCountry.name, params, company, footprint, dataArch);
-          sid = await startAnalysis(brief);
-        }
-        setSessionId(sid);
-        startStream(sid);
-      } catch (err) {
-        console.error("Failed to start analysis:", err);
+  const updateCaseParams = useCallback((caseId: string, patch: Partial<AnalysisParams>) => {
+    setCases((prev) => prev.map((c) => (c.id === caseId ? { ...c, params: { ...c.params, ...patch } } : c)));
+  }, []);
+
+  const removeCase = useCallback((caseId: string) => {
+    setCases((prev) => {
+      const next = prev.filter((c) => c.id !== caseId);
+      if (next.length === 0) {
+        setPanelOpen(false);
+        setActiveCountry(null);
+        setActiveCaseIdState(null);
+        setIsAddingCase(false);
+        return next;
       }
-    },
-    [activeCountry, resetStream, startStream, company, footprint, dataArch],
-  );
+      // If the removed one was active, pick the last one.
+      setActiveCaseIdState((curr) => {
+        if (curr !== caseId) return curr;
+        const fallback = next[next.length - 1];
+        setActiveCountry({ iso: fallback.iso, name: fallback.name });
+        return fallback.id;
+      });
+      return next;
+    });
+  }, []);
+
+  const setActiveCaseId = useCallback((caseId: string) => {
+    setCases((prev) => {
+      const found = prev.find((c) => c.id === caseId);
+      if (found) {
+        setActiveCaseIdState(caseId);
+        setActiveCountry({ iso: found.iso, name: found.name });
+      }
+      return prev;
+    });
+  }, []);
+
+  const beginAddCase = useCallback(() => setIsAddingCase(true), []);
+  const cancelAddCase = useCallback(() => setIsAddingCase(false), []);
+
+  const handleRunAnalysis = useCallback(async () => {
+    if (cases.length === 0) return;
+    resetStream();
+    setResult(null);
+    setTwin(null);
+    setShowTwinReview(false);
+    setHasNavigatedToResults(false);
+    try {
+      let sid: string;
+      // Demo path only for single-country DE selection (preserves existing demo flow).
+      if (cases.length === 1 && cases[0].iso === "DE") {
+        sid = await startDemoAnalysis();
+      } else {
+        const brief = buildMultiCaseBrief(cases, company, footprint, dataArch);
+        sid = await startAnalysis(brief);
+      }
+      setSessionId(sid);
+      startStream(sid);
+    } catch (err) {
+      console.error("Failed to start analysis:", err);
+    }
+  }, [cases, resetStream, startStream, company, footprint, dataArch]);
 
   useEffect(() => {
     if (!sessionId || !isRunning) return;
@@ -188,6 +317,9 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
     setSessionId(null);
     setActiveCountry(null);
     setPanelOpen(false);
+    setCases([]);
+    setActiveCaseIdState(null);
+    setIsAddingCase(false);
     setHasNavigatedToResults(false);
   }, [resetStream]);
 
@@ -197,6 +329,9 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
         presenceData,
         activeCountry,
         panelOpen,
+        cases,
+        activeCaseId,
+        isAddingCase,
         sessionId,
         result,
         twin,
@@ -210,6 +345,11 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
         handleCountryClick,
         handleClose,
         handleRunAnalysis,
+        updateCaseParams,
+        removeCase,
+        setActiveCaseId,
+        beginAddCase,
+        cancelAddCase,
         confirmTwinAndContinue,
         setShowTwinReview,
         resetAnalysis,
