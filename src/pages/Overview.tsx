@@ -214,7 +214,56 @@ export default function Overview() {
 
           <JurisdictionPanel />
 
-          {/* AgentStream panel hidden — progress shown via button spinner */}
+          {/* Saved expansions ribbon — visible when at least one analysis exists */}
+          {savedExpansions.length > 0 && (
+            <div className="absolute top-4 left-4 right-4 z-40 flex items-center gap-2 pointer-events-none">
+              <div className="bg-surface border border-outline-variant px-3 py-2 flex items-center gap-2 max-w-full overflow-x-auto pointer-events-auto shadow-sm">
+                <span className="font-mono text-[9px] tracking-widest uppercase text-outline shrink-0 mr-1">
+                  Saved Expansions
+                </span>
+                {savedExpansions.map((s) => {
+                  const isActive = s.id === activeSavedId;
+                  return (
+                    <span
+                      key={s.id}
+                      className={`group inline-flex items-center gap-1.5 border px-2.5 py-1 shrink-0 ${
+                        isActive
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-outline-variant text-primary hover:border-primary"
+                      }`}
+                    >
+                      <button
+                        onClick={() => loadSavedExpansion(s.id)}
+                        className="font-mono text-[10px] tracking-widest uppercase"
+                        title={`Open ${s.label}`}
+                      >
+                        {s.label}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeSavedExpansion(s.id);
+                        }}
+                        className={`opacity-60 hover:opacity-100 ${isActive ? "" : "hover:text-critical"}`}
+                        aria-label={`Remove ${s.label}`}
+                        title="Remove"
+                      >
+                        <MaterialIcon name="close" className="text-[12px]" />
+                      </button>
+                    </span>
+                  );
+                })}
+                <button
+                  onClick={startNewExpansion}
+                  className="ml-1 inline-flex items-center gap-1 border border-outline-variant text-primary font-mono text-[10px] tracking-widest uppercase px-2.5 py-1 hover:border-primary shrink-0"
+                  title="Start a new expansion"
+                >
+                  <MaterialIcon name="add" className="text-[12px]" />
+                  NEW EXPANSION
+                </button>
+              </div>
+            </div>
+          )}
 
           {showTwinReview && twin && (
             <div className="fixed inset-0 bg-primary/70 flex items-center justify-center z-[100]">
