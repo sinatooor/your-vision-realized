@@ -435,6 +435,18 @@ export function AnalysisProvider({ children }: { children: ReactNode }) {
       setSessionId(entry.sessionId);
       setResult(entry.result);
       setCases(entry.cases);
+      // Backfill the per-country params cache with values from this saved
+      // expansion, so re-clicking those countries restores them.
+      setParamsCache((prev) => {
+        const next = { ...prev };
+        for (const c of entry.cases) next[c.iso] = { ...c.params };
+        try {
+          localStorage.setItem("tg_case_params_cache", JSON.stringify(next));
+        } catch {
+          /* quota */
+        }
+        return next;
+      });
       setActiveCaseIdState(entry.cases[0]?.id ?? null);
       setActiveCountry(entry.cases[0] ? { iso: entry.cases[0].iso, name: entry.cases[0].name } : null);
       setPanelOpen(false);
