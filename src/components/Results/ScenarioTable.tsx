@@ -5,18 +5,10 @@ interface ScenarioTableProps {
   scenarios: Scenario[];
 }
 
-// Stoplight model — aligned with ConflictMap.
-// Lower score = lower risk / better outcome.
-function scoreColor(score: number): string {
-  if (score <= 33) return "text-low";       // green
-  if (score <= 66) return "text-medium";    // yellow
-  return "text-critical";                    // red
-}
-
-function scoreDot(score: number): string {
-  if (score <= 33) return "bg-low";
-  if (score <= 66) return "bg-medium";
-  return "bg-critical";
+// Monochrome model — recommended scenario gets full-contrast black numbers,
+// other scenarios are muted grey so the recommended column stands out.
+function numberColor(isRecommended: boolean): string {
+  return isRecommended ? "text-primary" : "text-outline";
 }
 
 export function ScenarioTable({ scenarios }: ScenarioTableProps) {
